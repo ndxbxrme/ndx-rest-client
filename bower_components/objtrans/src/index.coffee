@@ -1,7 +1,8 @@
 'use strict'
 
-objtrans = (input, pattern) ->
-  output = {}
+@objtrans = (input, pattern, output) ->
+  if not output
+    output = {}
   for field of pattern
     func = null
     type = Object.prototype.toString.call pattern[field]
@@ -48,4 +49,4 @@ objtrans = (input, pattern) ->
   output
   
 if typeof exports is 'object'
-  module.exports = objtrans
+  module.exports = @objtrans

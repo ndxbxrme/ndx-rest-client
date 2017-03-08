@@ -1,10 +1,10 @@
 (function() {
   'use strict';
-  var objtrans;
-
-  objtrans = function(input, pattern) {
-    var bit, bits, field, func, i, inField, index, len, myInput, output, type;
-    output = {};
+  this.objtrans = function(input, pattern, output) {
+    var bit, bits, field, func, i, inField, index, len, myInput, type;
+    if (!output) {
+      output = {};
+    }
     for (field in pattern) {
       func = null;
       type = Object.prototype.toString.call(pattern[field]);
@@ -65,7 +65,7 @@
   };
 
   if (typeof exports === 'object') {
-    module.exports = objtrans;
+    module.exports = this.objtrans;
   }
 
 }).call(this);
