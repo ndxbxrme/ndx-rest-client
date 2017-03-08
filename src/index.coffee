@@ -34,6 +34,18 @@ module.factory 'rest', ($http, $injector, $timeout) ->
             fn key
           endpoints[key].needsRefresh = false
   , 50
+  destroy = (obj) ->
+    type = Object.prototype.toString.call obj
+    if type is '[object Object]'
+      if obj.destroy
+        obj.destroy()
+      for key in obj
+        destroy obj[key]
+    else if type is '[object Array]'
+      for item in obj
+        destroy item
+    return
+    
   if $injector.has 'auth'
     okToLoad = false
     auth = $injector.get 'auth'
@@ -76,88 +88,141 @@ module.factory 'rest', ($http, $injector, $timeout) ->
   autoId: autoId
   okToLoad: ->
     okToLoad
-  save: (name, obj) ->
-    $http.post "/api/#{name}/#{obj[autoId] or ''}", obj
+  save: (endpoint, obj) ->
+    $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
     .then (response) =>
-      endpoints[name].needsRefresh = true
-      callRefreshFns name
+      endpoints[endpoint].needsRefresh = true
+      callRefreshFns endpoint
     , (err) ->
       false
-  'delete': (name, obj) ->
-    $http.delete "/api/#{name}/#{obj[autoId] or ''}"
+  'delete': (endpoint, obj) ->
+    $http.delete (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}")
     .then (response) =>
-      endpoints[name].needsRefresh = true
-      callRefreshFns name
+      endpoints[endpoint].needsRefresh = true
+      callRefreshFns endpoint
     , (err) ->
       false
+  search: (endpoint, args, obj, cb) ->
+    $http.post (endpoint.route or "/api/#{endpoint}/search"), args
+    .then (response) ->
+      obj.items = response.data.items
+      obj.total = response.data.total
+      obj.page = response.data.page
+      obj.pageSize = response.data.pageSize
+      obj.error = response.data.error
+      cb? obj
+    , (err) ->
+      obj.items = []
+      obj.total = 0
+      obj.page = 1
+      obj.error = err
+      cb? obj
+  list: (endpoint, obj, cb) ->
+    $http.post (endpoint.route or "/api/#{endpoint}")
+    .then (response) ->
+      obj.items = response.data.items
+      obj.total = response.data.total
+      obj.page = response.data.page
+      obj.pageSize = response.data.pageSize
+      obj.error = response.data.error
+      cb? obj
+    , (err) ->
+      obj.items = []
+      obj.total = 0
+      obj.page = 1
+      obj.error = err
+      cb? obj
+  single: (endpoint, id, obj, cb) ->
+    $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}"
+    .then (response) ->
+      obj.item = response.data
+      cb? obj.item
+    , (err) ->
+      obj.item = {}
+      cb? obj.item
   register: (fn) ->
     refreshFns.push fn
   dereg: (fn) ->
     refreshFns.splice refreshFns.indexOf(fn), 1
+  destroy: destroy
 .run ($rootScope, $http, rest) ->
   root = Object.getPrototypeOf $rootScope
-  root.list = (name, args, cb) ->
+  root.list = (endpoint, args, cb) ->
     obj =
       items: null
       refreshFn: null
-      table: name
+      endpoint: endpoint
       locked: false
       save: (item) ->
-        rest.save name, item
+        rest.save endpoint, item
       delete: (item) ->
-        rest.delete name, item
-    RefreshFn = (name, args) ->
+        rest.delete endpoint, item
+      destroy: ->
+        rest.dereg obj.refreshFn
+    RefreshFn = (endpoint, args) ->
       (table) ->
-        if table is name or not table
-          $http.post "/api/#{name}/search", args
-          .then (response) ->
-            obj.items = response.data.items
-            obj.total = response.data.total
-            obj.page = response.data.page
-            obj.pageSize = response.data.pageSize
-            obj.error = response.data.error
-            cb? obj
-          , (err) ->
-            obj.items = []
-            obj.total = 0
-            obj.page = 1
-            obj.error = err
-            cb? obj
-    obj.refreshFn = RefreshFn name, args
+        if obj.items
+          rest.destroy obj.items
+        if endpoint.route and endpoint.endpoints
+          for ep in endpoint.endpoints
+            if table is ep or not table
+              rest.search ep, args, obj, cb
+              break
+        else
+          if table is endpoint or not table
+            rest.search endpoint, args, obj, cb
+    obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
+    if endpoint.route and not endpoint.endpoints
+      rest.search endpoint, args, obj.cb
     dereg = @.$watch ->
       JSON.stringify args
     , (n, o) ->
       if n and rest.okToLoad()
-        rest.endpoints[name].needsRefresh = true
-        obj.refreshFn obj.table
+        if endpoint.route and endpoint.endpoints
+          for ep in endpoint.endpoints
+            rest.endpoints[ep].needsRefresh = true
+        else
+          rest.endpoints[endpoint].needsRefresh = true
+        obj.refreshFn obj.endpoint
     , true
     @.$on '$destroy', ->
       dereg()
-      rest.dereg obj.refreshFn()
+      obj.destroy()
     obj
-  root.single = (name, id, cb) ->
+  root.single = (endpoint, id, cb) ->
     obj = 
       item: null
       refreshFn: null
-      table: name
+      endpoint: endpoint
       locked: false
       save: ->
-        rest.save name, @.item
+        rest.save endpoint, @.item
       delete: ->
-        rest.delete name, @.item
-    RefreshFn = (name, id) ->
+        rest.delete endpoint, @.item
+      destroy: ->
+        rest.dereg obj.refreshFn
+    RefreshFn = (endpoint, id) ->
       (table) ->
-        if table is name or not table
-          $http.get "/api/#{name}/#{id}"
-          .then (response) ->
-            obj.item = response.data
-            cb? obj.item
-          , (err) ->
-            obj.item = {}
-            cb? obj.item
-    obj.refreshFn = RefreshFn name, id
+        if endpoint.route and endpoint.endpoints
+          for ep in endpoint.endpoints
+            if table is ep or not table
+              rest.single ep, id, obj, cb
+              break
+        else
+          if table is endpoint or not table
+            rest.single endpoint, id, obj, cb
+    obj.refreshFn = RefreshFn endpoint, id
+    rest.register obj.refreshFn
     if rest.okToLoad()
-      rest.endpoints[name].needsRefresh = true
-      obj.refreshFn obj.table
+      if endpoint.route and endpoint.endpoints
+        for ep in endpoint.endpoints
+          rest.endpoints[ep].needsRefresh = true
+      else
+        rest.endpoints[endpoint].needsRefresh = true
+      obj.refreshFn obj.endpoint
+    if endpoint.route and not endpoint.endpoints
+      rest.single endpoint, id, obj, cb
+    @.$on '$destroy', obj.destroy
+
     obj

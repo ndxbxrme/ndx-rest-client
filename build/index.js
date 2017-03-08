@@ -12,7 +12,7 @@
   }
 
   module.factory('rest', function($http, $injector, $timeout) {
-    var auth, autoId, callRefreshFns, debounce, dereg, endpoints, okToLoad, refreshFns, root, socket, waiting;
+    var auth, autoId, callRefreshFns, debounce, dereg, destroy, endpoints, okToLoad, refreshFns, root, socket, waiting;
     okToLoad = false;
     endpoints = {};
     autoId = '_id';
@@ -57,6 +57,24 @@
         return results;
       }
     }, 50);
+    destroy = function(obj) {
+      var i, item, j, key, len, len1, type;
+      type = Object.prototype.toString.call(obj);
+      if (type === '[object Object]') {
+        if (obj.destroy) {
+          obj.destroy();
+        }
+        for (i = 0, len = obj.length; i < len; i++) {
+          key = obj[i];
+          destroy(obj[key]);
+        }
+      } else if (type === '[object Array]') {
+        for (j = 0, len1 = obj.length; j < len1; j++) {
+          item = obj[j];
+          destroy(item);
+        }
+      }
+    };
     if ($injector.has('auth')) {
       okToLoad = false;
       auth = $injector.get('auth');
@@ -119,24 +137,65 @@
       okToLoad: function() {
         return okToLoad;
       },
-      save: function(name, obj) {
-        return $http.post("/api/" + name + "/" + (obj[autoId] || ''), obj).then((function(_this) {
+      save: function(endpoint, obj) {
+        return $http.post((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || '')), obj).then((function(_this) {
           return function(response) {
-            endpoints[name].needsRefresh = true;
-            return callRefreshFns(name);
+            endpoints[endpoint].needsRefresh = true;
+            return callRefreshFns(endpoint);
           };
         })(this), function(err) {
           return false;
         });
       },
-      'delete': function(name, obj) {
-        return $http["delete"]("/api/" + name + "/" + (obj[autoId] || '')).then((function(_this) {
+      'delete': function(endpoint, obj) {
+        return $http["delete"]((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || ''))).then((function(_this) {
           return function(response) {
-            endpoints[name].needsRefresh = true;
-            return callRefreshFns(name);
+            endpoints[endpoint].needsRefresh = true;
+            return callRefreshFns(endpoint);
           };
         })(this), function(err) {
           return false;
+        });
+      },
+      search: function(endpoint, args, obj, cb) {
+        return $http.post(endpoint.route || ("/api/" + endpoint + "/search"), args).then(function(response) {
+          obj.items = response.data.items;
+          obj.total = response.data.total;
+          obj.page = response.data.page;
+          obj.pageSize = response.data.pageSize;
+          obj.error = response.data.error;
+          return typeof cb === "function" ? cb(obj) : void 0;
+        }, function(err) {
+          obj.items = [];
+          obj.total = 0;
+          obj.page = 1;
+          obj.error = err;
+          return typeof cb === "function" ? cb(obj) : void 0;
+        });
+      },
+      list: function(endpoint, obj, cb) {
+        return $http.post(endpoint.route || ("/api/" + endpoint)).then(function(response) {
+          obj.items = response.data.items;
+          obj.total = response.data.total;
+          obj.page = response.data.page;
+          obj.pageSize = response.data.pageSize;
+          obj.error = response.data.error;
+          return typeof cb === "function" ? cb(obj) : void 0;
+        }, function(err) {
+          obj.items = [];
+          obj.total = 0;
+          obj.page = 1;
+          obj.error = err;
+          return typeof cb === "function" ? cb(obj) : void 0;
+        });
+      },
+      single: function(endpoint, id, obj, cb) {
+        return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id)).then(function(response) {
+          obj.item = response.data;
+          return typeof cb === "function" ? cb(obj.item) : void 0;
+        }, function(err) {
+          obj.item = {};
+          return typeof cb === "function" ? cb(obj.item) : void 0;
         });
       },
       register: function(fn) {
@@ -144,93 +203,141 @@
       },
       dereg: function(fn) {
         return refreshFns.splice(refreshFns.indexOf(fn), 1);
-      }
+      },
+      destroy: destroy
     };
   }).run(function($rootScope, $http, rest) {
     var root;
     root = Object.getPrototypeOf($rootScope);
-    root.list = function(name, args, cb) {
+    root.list = function(endpoint, args, cb) {
       var RefreshFn, dereg, obj;
       obj = {
         items: null,
         refreshFn: null,
-        table: name,
+        endpoint: endpoint,
         locked: false,
         save: function(item) {
-          return rest.save(name, item);
+          return rest.save(endpoint, item);
         },
         "delete": function(item) {
-          return rest["delete"](name, item);
+          return rest["delete"](endpoint, item);
+        },
+        destroy: function() {
+          return rest.dereg(obj.refreshFn);
         }
       };
-      RefreshFn = function(name, args) {
+      RefreshFn = function(endpoint, args) {
         return function(table) {
-          if (table === name || !table) {
-            return $http.post("/api/" + name + "/search", args).then(function(response) {
-              obj.items = response.data.items;
-              obj.total = response.data.total;
-              obj.page = response.data.page;
-              obj.pageSize = response.data.pageSize;
-              obj.error = response.data.error;
-              return typeof cb === "function" ? cb(obj) : void 0;
-            }, function(err) {
-              obj.items = [];
-              obj.total = 0;
-              obj.page = 1;
-              obj.error = err;
-              return typeof cb === "function" ? cb(obj) : void 0;
-            });
+          var ep, i, len, ref, results;
+          if (obj.items) {
+            rest.destroy(obj.items);
+          }
+          if (endpoint.route && endpoint.endpoints) {
+            ref = endpoint.endpoints;
+            results = [];
+            for (i = 0, len = ref.length; i < len; i++) {
+              ep = ref[i];
+              if (table === ep || !table) {
+                rest.search(ep, args, obj, cb);
+                break;
+              } else {
+                results.push(void 0);
+              }
+            }
+            return results;
+          } else {
+            if (table === endpoint || !table) {
+              return rest.search(endpoint, args, obj, cb);
+            }
           }
         };
       };
-      obj.refreshFn = RefreshFn(name, args);
+      obj.refreshFn = RefreshFn(endpoint, args);
       rest.register(obj.refreshFn);
+      if (endpoint.route && !endpoint.endpoints) {
+        rest.search(endpoint, args, obj.cb);
+      }
       dereg = this.$watch(function() {
         return JSON.stringify(args);
       }, function(n, o) {
+        var ep, i, len, ref;
         if (n && rest.okToLoad()) {
-          rest.endpoints[name].needsRefresh = true;
-          return obj.refreshFn(obj.table);
+          if (endpoint.route && endpoint.endpoints) {
+            ref = endpoint.endpoints;
+            for (i = 0, len = ref.length; i < len; i++) {
+              ep = ref[i];
+              rest.endpoints[ep].needsRefresh = true;
+            }
+          } else {
+            rest.endpoints[endpoint].needsRefresh = true;
+          }
+          return obj.refreshFn(obj.endpoint);
         }
       }, true);
       this.$on('$destroy', function() {
         dereg();
-        return rest.dereg(obj.refreshFn());
+        return obj.destroy();
       });
       return obj;
     };
-    return root.single = function(name, id, cb) {
-      var RefreshFn, obj;
+    return root.single = function(endpoint, id, cb) {
+      var RefreshFn, ep, i, len, obj, ref;
       obj = {
         item: null,
         refreshFn: null,
-        table: name,
+        endpoint: endpoint,
         locked: false,
         save: function() {
-          return rest.save(name, this.item);
+          return rest.save(endpoint, this.item);
         },
         "delete": function() {
-          return rest["delete"](name, this.item);
+          return rest["delete"](endpoint, this.item);
+        },
+        destroy: function() {
+          return rest.dereg(obj.refreshFn);
         }
       };
-      RefreshFn = function(name, id) {
+      RefreshFn = function(endpoint, id) {
         return function(table) {
-          if (table === name || !table) {
-            return $http.get("/api/" + name + "/" + id).then(function(response) {
-              obj.item = response.data;
-              return typeof cb === "function" ? cb(obj.item) : void 0;
-            }, function(err) {
-              obj.item = {};
-              return typeof cb === "function" ? cb(obj.item) : void 0;
-            });
+          var ep, i, len, ref, results;
+          if (endpoint.route && endpoint.endpoints) {
+            ref = endpoint.endpoints;
+            results = [];
+            for (i = 0, len = ref.length; i < len; i++) {
+              ep = ref[i];
+              if (table === ep || !table) {
+                rest.single(ep, id, obj, cb);
+                break;
+              } else {
+                results.push(void 0);
+              }
+            }
+            return results;
+          } else {
+            if (table === endpoint || !table) {
+              return rest.single(endpoint, id, obj, cb);
+            }
           }
         };
       };
-      obj.refreshFn = RefreshFn(name, id);
+      obj.refreshFn = RefreshFn(endpoint, id);
+      rest.register(obj.refreshFn);
       if (rest.okToLoad()) {
-        rest.endpoints[name].needsRefresh = true;
-        obj.refreshFn(obj.table);
+        if (endpoint.route && endpoint.endpoints) {
+          ref = endpoint.endpoints;
+          for (i = 0, len = ref.length; i < len; i++) {
+            ep = ref[i];
+            rest.endpoints[ep].needsRefresh = true;
+          }
+        } else {
+          rest.endpoints[endpoint].needsRefresh = true;
+        }
+        obj.refreshFn(obj.endpoint);
       }
+      if (endpoint.route && !endpoint.endpoints) {
+        rest.single(endpoint, id, obj, cb);
+      }
+      this.$on('$destroy', obj.destroy);
       return obj;
     };
   });
