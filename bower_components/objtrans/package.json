@@ -1,18 +1,18 @@
 {
-  "name": "ndx-rest-client",
-  "version": "0.0.5",
-  "description": "rest client for ndx-framework apps",
+  "name": "objtrans",
+  "version": "0.0.4",
+  "description": "transform an object",
   "main": "build/index.js",
   "scripts": {
-    "test": "node build/test.js"
+    "test": "node build/test/test.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ndxbxrme/ndx-rest-client"
+    "url": "https://github.com/ndxbxrme/objtrans"
   },
   "author": "ndxbxrme",
   "license": "MIT",
-  "homepage": "https://github.com/ndxbxrme/ndx-rest-client",
+  "homepage": "https://github.com/ndxbxrme/objtrans",
   "devDependencies": {
     "grunt": "^1.0.1",
     "grunt-cli": "^1.2.0",

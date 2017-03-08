@@ -1,0 +1,32 @@
+{
+  "name": "objtrans",
+  "description": "transform an object",
+  "main": "build/index.js",
+  "authors": [
+    "ndxbxrme"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "object",
+    "transform"
+  ],
+  "homepage": "https://github.com/ndxbxrme/objtrans",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "version": "0.0.5",
+  "_release": "0.0.5",
+  "_resolution": {
+    "type": "version",
+    "tag": "0.0.5",
+    "commit": "03b61a6791a78e2bdaff74301972b237168e97e8"
+  },
+  "_source": "https://github.com/ndxbxrme/objtrans.git",
+  "_target": "^0.0.5",
+  "_originalSource": "objtrans",
+  "_direct": true
+}

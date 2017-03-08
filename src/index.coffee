@@ -10,6 +10,12 @@ module.factory 'rest', ($http, $injector, $timeout) ->
   autoId = '_id'
   refreshFns = []
   waiting = false
+  listTransform =
+    items: true
+    total: true
+    page: true
+    pageSize: true
+    error: true
   debounce = (func, wait, immediate) ->
     timeout = undefined
     ->
@@ -103,13 +109,9 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     , (err) ->
       false
   search: (endpoint, args, obj, cb) ->
-    $http.post (endpoint.route or "/api/#{endpoint}/search"), args
+    $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
     .then (response) ->
-      obj.items = response.data.items
-      obj.total = response.data.total
-      obj.page = response.data.page
-      obj.pageSize = response.data.pageSize
-      obj.error = response.data.error
+      objtrans response.data, (args.transform or listTransform), obj
       cb? obj
     , (err) ->
       obj.items = []
@@ -120,11 +122,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
   list: (endpoint, obj, cb) ->
     $http.post (endpoint.route or "/api/#{endpoint}")
     .then (response) ->
-      obj.items = response.data.items
-      obj.total = response.data.total
-      obj.page = response.data.page
-      obj.pageSize = response.data.pageSize
-      obj.error = response.data.error
+      objtrans response.data, (args.transform or listTransform), obj
       cb? obj
     , (err) ->
       obj.items = []
@@ -179,9 +177,10 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       JSON.stringify args
     , (n, o) ->
       if n and rest.okToLoad()
-        if endpoint.route and endpoint.endpoints
-          for ep in endpoint.endpoints
-            rest.endpoints[ep].needsRefresh = true
+        if endpoint.route
+          if endpoint.endpoints and endpoint.endpoints.length
+            for ep in endpoint.endpoints
+              rest.endpoints[ep].needsRefresh = true
         else
           rest.endpoints[endpoint].needsRefresh = true
         obj.refreshFn obj.endpoint
@@ -204,11 +203,12 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, id) ->
       (table) ->
-        if endpoint.route and endpoint.endpoints
-          for ep in endpoint.endpoints
-            if table is ep or not table
-              rest.single ep, id, obj, cb
-              break
+        if endpoint.route
+          if endpoint.endpoints and endpoint.endpoints.length
+            for ep in endpoint.endpoints
+              if table is ep or not table
+                rest.single ep, id, obj, cb
+                break
         else
           if table is endpoint or not table
             rest.single endpoint, id, obj, cb

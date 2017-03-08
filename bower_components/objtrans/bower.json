@@ -1,23 +1,21 @@
 {
-  "name": "ndx-rest",
-  "description": "rest client for ndx-framework apps",
+  "name": "objtrans",
+  "description": "transform an object",
   "main": "build/index.js",
   "authors": [
     "ndxbxrme"
   ],
   "license": "MIT",
   "keywords": [
-    "rest"
+    "object",
+    "transform"
   ],
-  "homepage": "https://github.com/ndxbxrme/ndx-rest-client",
+  "homepage": "https://github.com/ndxbxrme/objtrans",
   "ignore": [
     "**/.*",
     "node_modules",
     "bower_components",
     "test",
     "tests"
-  ],
-  "dependencies": {
-    "objtrans": "^0.0.5"
-  }
+  ]
 }

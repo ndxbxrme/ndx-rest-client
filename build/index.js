@@ -12,12 +12,19 @@
   }
 
   module.factory('rest', function($http, $injector, $timeout) {
-    var auth, autoId, callRefreshFns, debounce, dereg, destroy, endpoints, okToLoad, refreshFns, root, socket, waiting;
+    var auth, autoId, callRefreshFns, debounce, dereg, destroy, endpoints, listTransform, okToLoad, refreshFns, root, socket, waiting;
     okToLoad = false;
     endpoints = {};
     autoId = '_id';
     refreshFns = [];
     waiting = false;
+    listTransform = {
+      items: true,
+      total: true,
+      page: true,
+      pageSize: true,
+      error: true
+    };
     debounce = function(func, wait, immediate) {
       var timeout;
       timeout = void 0;
@@ -158,12 +165,8 @@
         });
       },
       search: function(endpoint, args, obj, cb) {
-        return $http.post(endpoint.route || ("/api/" + endpoint + "/search"), args).then(function(response) {
-          obj.items = response.data.items;
-          obj.total = response.data.total;
-          obj.page = response.data.page;
-          obj.pageSize = response.data.pageSize;
-          obj.error = response.data.error;
+        return $http.post(endpoint.route || ("/api/" + endpoint + "/search"), endpoint.route && args && args.where ? args.where : args).then(function(response) {
+          objtrans(response.data, args.transform || listTransform, obj);
           return typeof cb === "function" ? cb(obj) : void 0;
         }, function(err) {
           obj.items = [];
@@ -175,11 +178,7 @@
       },
       list: function(endpoint, obj, cb) {
         return $http.post(endpoint.route || ("/api/" + endpoint)).then(function(response) {
-          obj.items = response.data.items;
-          obj.total = response.data.total;
-          obj.page = response.data.page;
-          obj.pageSize = response.data.pageSize;
-          obj.error = response.data.error;
+          objtrans(response.data, args.transform || listTransform, obj);
           return typeof cb === "function" ? cb(obj) : void 0;
         }, function(err) {
           obj.items = [];
@@ -262,11 +261,13 @@
       }, function(n, o) {
         var ep, i, len, ref;
         if (n && rest.okToLoad()) {
-          if (endpoint.route && endpoint.endpoints) {
-            ref = endpoint.endpoints;
-            for (i = 0, len = ref.length; i < len; i++) {
-              ep = ref[i];
-              rest.endpoints[ep].needsRefresh = true;
+          if (endpoint.route) {
+            if (endpoint.endpoints && endpoint.endpoints.length) {
+              ref = endpoint.endpoints;
+              for (i = 0, len = ref.length; i < len; i++) {
+                ep = ref[i];
+                rest.endpoints[ep].needsRefresh = true;
+              }
             }
           } else {
             rest.endpoints[endpoint].needsRefresh = true;
@@ -300,19 +301,21 @@
       RefreshFn = function(endpoint, id) {
         return function(table) {
           var ep, i, len, ref, results;
-          if (endpoint.route && endpoint.endpoints) {
-            ref = endpoint.endpoints;
-            results = [];
-            for (i = 0, len = ref.length; i < len; i++) {
-              ep = ref[i];
-              if (table === ep || !table) {
-                rest.single(ep, id, obj, cb);
-                break;
-              } else {
-                results.push(void 0);
+          if (endpoint.route) {
+            if (endpoint.endpoints && endpoint.endpoints.length) {
+              ref = endpoint.endpoints;
+              results = [];
+              for (i = 0, len = ref.length; i < len; i++) {
+                ep = ref[i];
+                if (table === ep || !table) {
+                  rest.single(ep, id, obj, cb);
+                  break;
+                } else {
+                  results.push(void 0);
+                }
               }
+              return results;
             }
-            return results;
           } else {
             if (table === endpoint || !table) {
               return rest.single(endpoint, id, obj, cb);
