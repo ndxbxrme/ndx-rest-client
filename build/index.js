@@ -165,6 +165,7 @@
         });
       },
       search: function(endpoint, args, obj, cb) {
+        args = args || {};
         return $http.post(endpoint.route || ("/api/" + endpoint + "/search"), endpoint.route && args && args.where ? args.where : args).then(function(response) {
           objtrans(response.data, args.transform || listTransform, obj);
           return typeof cb === "function" ? cb(obj) : void 0;
@@ -231,19 +232,21 @@
           if (obj.items) {
             rest.destroy(obj.items);
           }
-          if (endpoint.route && endpoint.endpoints) {
-            ref = endpoint.endpoints;
-            results = [];
-            for (i = 0, len = ref.length; i < len; i++) {
-              ep = ref[i];
-              if (table === ep || !table) {
-                rest.search(ep, args, obj, cb);
-                break;
-              } else {
-                results.push(void 0);
+          if (endpoint.route) {
+            if (endpoint.endpoints) {
+              ref = endpoint.endpoints;
+              results = [];
+              for (i = 0, len = ref.length; i < len; i++) {
+                ep = ref[i];
+                if (table === ep || !table) {
+                  rest.search(ep, args, obj, cb);
+                  break;
+                } else {
+                  results.push(void 0);
+                }
               }
+              return results;
             }
-            return results;
           } else {
             if (table === endpoint || !table) {
               return rest.search(endpoint, args, obj, cb);
@@ -254,7 +257,7 @@
       obj.refreshFn = RefreshFn(endpoint, args);
       rest.register(obj.refreshFn);
       if (endpoint.route && !endpoint.endpoints) {
-        rest.search(endpoint, args, obj.cb);
+        rest.search(endpoint, args, obj, cb);
       }
       dereg = this.$watch(function() {
         return JSON.stringify(args);
@@ -302,19 +305,21 @@
         return function(table) {
           var ep, i, len, ref, results;
           if (endpoint.route) {
-            if (endpoint.endpoints && endpoint.endpoints.length) {
-              ref = endpoint.endpoints;
-              results = [];
-              for (i = 0, len = ref.length; i < len; i++) {
-                ep = ref[i];
-                if (table === ep || !table) {
-                  rest.single(ep, id, obj, cb);
-                  break;
-                } else {
-                  results.push(void 0);
+            if (endpoint.endpoints) {
+              if (endpoint.endpoints.length) {
+                ref = endpoint.endpoints;
+                results = [];
+                for (i = 0, len = ref.length; i < len; i++) {
+                  ep = ref[i];
+                  if (table === ep || !table) {
+                    rest.single(ep, id, obj, cb);
+                    break;
+                  } else {
+                    results.push(void 0);
+                  }
                 }
+                return results;
               }
-              return results;
             }
           } else {
             if (table === endpoint || !table) {
@@ -326,11 +331,13 @@
       obj.refreshFn = RefreshFn(endpoint, id);
       rest.register(obj.refreshFn);
       if (rest.okToLoad()) {
-        if (endpoint.route && endpoint.endpoints) {
-          ref = endpoint.endpoints;
-          for (i = 0, len = ref.length; i < len; i++) {
-            ep = ref[i];
-            rest.endpoints[ep].needsRefresh = true;
+        if (endpoint.route) {
+          if (endpoint.endpoints) {
+            ref = endpoint.endpoints;
+            for (i = 0, len = ref.length; i < len; i++) {
+              ep = ref[i];
+              rest.endpoints[ep].needsRefresh = true;
+            }
           }
         } else {
           rest.endpoints[endpoint].needsRefresh = true;

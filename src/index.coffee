@@ -109,6 +109,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     , (err) ->
       false
   search: (endpoint, args, obj, cb) ->
+    args = args or {}
     $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
     .then (response) ->
       objtrans response.data, (args.transform or listTransform), obj
@@ -161,18 +162,19 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       (table) ->
         if obj.items
           rest.destroy obj.items
-        if endpoint.route and endpoint.endpoints
-          for ep in endpoint.endpoints
-            if table is ep or not table
-              rest.search ep, args, obj, cb
-              break
+        if endpoint.route 
+          if endpoint.endpoints
+            for ep in endpoint.endpoints
+              if table is ep or not table
+                rest.search ep, args, obj, cb
+                break
         else
           if table is endpoint or not table
             rest.search endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
     if endpoint.route and not endpoint.endpoints
-      rest.search endpoint, args, obj.cb
+      rest.search endpoint, args, obj, cb
     dereg = @.$watch ->
       JSON.stringify args
     , (n, o) ->
@@ -204,20 +206,22 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     RefreshFn = (endpoint, id) ->
       (table) ->
         if endpoint.route
-          if endpoint.endpoints and endpoint.endpoints.length
-            for ep in endpoint.endpoints
-              if table is ep or not table
-                rest.single ep, id, obj, cb
-                break
+          if endpoint.endpoints
+            if endpoint.endpoints.length
+              for ep in endpoint.endpoints
+                if table is ep or not table
+                  rest.single ep, id, obj, cb
+                  break
         else
           if table is endpoint or not table
             rest.single endpoint, id, obj, cb
     obj.refreshFn = RefreshFn endpoint, id
     rest.register obj.refreshFn
     if rest.okToLoad()
-      if endpoint.route and endpoint.endpoints
-        for ep in endpoint.endpoints
-          rest.endpoints[ep].needsRefresh = true
+      if endpoint.route
+        if endpoint.endpoints
+          for ep in endpoint.endpoints
+            rest.endpoints[ep].needsRefresh = true
       else
         rest.endpoints[endpoint].needsRefresh = true
       obj.refreshFn obj.endpoint
