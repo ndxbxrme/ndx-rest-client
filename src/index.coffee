@@ -51,6 +51,35 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       for item in obj
         destroy item
     return
+  cloneSpecialProps = (obj) ->
+    output = null
+    type = Object.prototype.toString.call obj
+    if type is '[object Array]'
+      output = []
+      for item in obj
+        clonedItem = cloneSpecialProps item
+        clonedItem[autoId] = item[autoId]
+        output.push clonedItem
+        break
+    else if type is '[object Object]'
+      output = {}
+      for key of obj
+        if key.indexOf('$') is 0
+          output[key] = obj[key]
+    output
+          
+  restoreSpecialProps = (obj, clonedProps) ->
+    type = Object.prototype.toString.call obj
+    if type is '[object Array']
+      for item in obj
+        for clonedItem in clonedProps
+          if item[autoId] is clonedItem[autoId]
+            restoreSpecialProps item, clonedItem
+            break
+    else if type is '[object Object]'
+      for key of clonedProps
+        obj[key] = clonedProps[key]
+    return
     
   if $injector.has 'auth'
     okToLoad = false
@@ -112,7 +141,12 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     args = args or {}
     $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
     .then (response) ->
+      clonedProps = null
+      if obj.items and obj.items.length
+        clonedProps = cloneSpecialProps obj.items
       objtrans response.data, (args.transform or listTransform), obj
+      if obj.items and obj.items.length and clonedProps
+        restoreSpecialProps obj.items, clonedProps
       cb? obj
     , (err) ->
       obj.items = []
@@ -123,7 +157,12 @@ module.factory 'rest', ($http, $injector, $timeout) ->
   list: (endpoint, obj, cb) ->
     $http.post (endpoint.route or "/api/#{endpoint}")
     .then (response) ->
+      clonedProps = null
+      if obj.items and obj.items.length
+        clonedProps = cloneSpecialProps obj.items
       objtrans response.data, (args.transform or listTransform), obj
+      if obj.items and obj.items.length and clonedProps
+        restoreSpecialProps obj.items, clonedProps
       cb? obj
     , (err) ->
       obj.items = []
@@ -134,7 +173,12 @@ module.factory 'rest', ($http, $injector, $timeout) ->
   single: (endpoint, id, obj, cb) ->
     $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}"
     .then (response) ->
+      clonedProps = null
+      if obj.item
+        clonedProps = cloneSpecialProps obj.items
       obj.item = response.data
+      if obj.item and clonedProps
+        restoreSpecialProps obj.item, clonedProps
       cb? obj.item
     , (err) ->
       obj.item = {}
