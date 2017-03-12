@@ -211,8 +211,10 @@ module.factory 'rest', ($http, $injector, $timeout) ->
             if endpoint.endpoints
               for ep in endpoint.endpoints
                 if table is ep or not table
-                  rest.search ep, args, obj, cb
+                  rest.search endpoint, args, obj, cb
                   break
+            else
+              rest.search endpoint, args, obj, cb
           else
             if table is endpoint or not table
               rest.search endpoint, args, obj, cb
@@ -256,8 +258,10 @@ module.factory 'rest', ($http, $injector, $timeout) ->
               if endpoint.endpoints.length
                 for ep in endpoint.endpoints
                   if table is ep or not table
-                    rest.single ep, id, obj, cb
+                    rest.single endpoint, id, obj, cb
                     break
+              else
+                rest.single endpoint, id, obj, cb
           else
             if table is endpoint or not table
               rest.single endpoint, id, obj, cb

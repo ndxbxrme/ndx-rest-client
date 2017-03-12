@@ -307,13 +307,15 @@
                 for (i = 0, len = ref.length; i < len; i++) {
                   ep = ref[i];
                   if (table === ep || !table) {
-                    rest.search(ep, args, obj, cb);
+                    rest.search(endpoint, args, obj, cb);
                     break;
                   } else {
                     results.push(void 0);
                   }
                 }
                 return results;
+              } else {
+                return rest.search(endpoint, args, obj, cb);
               }
             } else {
               if (table === endpoint || !table) {
@@ -382,13 +384,15 @@
                   for (i = 0, len = ref.length; i < len; i++) {
                     ep = ref[i];
                     if (table === ep || !table) {
-                      rest.single(ep, id, obj, cb);
+                      rest.single(endpoint, id, obj, cb);
                       break;
                     } else {
                       results.push(void 0);
                     }
                   }
                   return results;
+                } else {
+                  return rest.single(endpoint, id, obj, cb);
                 }
               }
             } else {
