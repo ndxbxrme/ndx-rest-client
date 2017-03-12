@@ -296,27 +296,29 @@
       RefreshFn = function(endpoint, args) {
         return function(table) {
           var ep, i, len, ref, results;
-          if (obj.items) {
-            rest.destroy(obj.items);
-          }
-          if (endpoint.route) {
-            if (endpoint.endpoints) {
-              ref = endpoint.endpoints;
-              results = [];
-              for (i = 0, len = ref.length; i < len; i++) {
-                ep = ref[i];
-                if (table === ep || !table) {
-                  rest.search(ep, args, obj, cb);
-                  break;
-                } else {
-                  results.push(void 0);
-                }
-              }
-              return results;
+          if (!obj.locked) {
+            if (obj.items) {
+              rest.destroy(obj.items);
             }
-          } else {
-            if (table === endpoint || !table) {
-              return rest.search(endpoint, args, obj, cb);
+            if (endpoint.route) {
+              if (endpoint.endpoints) {
+                ref = endpoint.endpoints;
+                results = [];
+                for (i = 0, len = ref.length; i < len; i++) {
+                  ep = ref[i];
+                  if (table === ep || !table) {
+                    rest.search(ep, args, obj, cb);
+                    break;
+                  } else {
+                    results.push(void 0);
+                  }
+                }
+                return results;
+              }
+            } else {
+              if (table === endpoint || !table) {
+                return rest.search(endpoint, args, obj, cb);
+              }
             }
           }
         };
@@ -371,26 +373,28 @@
       RefreshFn = function(endpoint, id) {
         return function(table) {
           var ep, i, len, ref, results;
-          if (endpoint.route) {
-            if (endpoint.endpoints) {
-              if (endpoint.endpoints.length) {
-                ref = endpoint.endpoints;
-                results = [];
-                for (i = 0, len = ref.length; i < len; i++) {
-                  ep = ref[i];
-                  if (table === ep || !table) {
-                    rest.single(ep, id, obj, cb);
-                    break;
-                  } else {
-                    results.push(void 0);
+          if (!obj.locked) {
+            if (endpoint.route) {
+              if (endpoint.endpoints) {
+                if (endpoint.endpoints.length) {
+                  ref = endpoint.endpoints;
+                  results = [];
+                  for (i = 0, len = ref.length; i < len; i++) {
+                    ep = ref[i];
+                    if (table === ep || !table) {
+                      rest.single(ep, id, obj, cb);
+                      break;
+                    } else {
+                      results.push(void 0);
+                    }
                   }
+                  return results;
                 }
-                return results;
               }
-            }
-          } else {
-            if (table === endpoint || !table) {
-              return rest.single(endpoint, id, obj, cb);
+            } else {
+              if (table === endpoint || !table) {
+                return rest.single(endpoint, id, obj, cb);
+              }
             }
           }
         };

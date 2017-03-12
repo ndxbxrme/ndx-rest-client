@@ -204,17 +204,18 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, args) ->
       (table) ->
-        if obj.items
-          rest.destroy obj.items
-        if endpoint.route 
-          if endpoint.endpoints
-            for ep in endpoint.endpoints
-              if table is ep or not table
-                rest.search ep, args, obj, cb
-                break
-        else
-          if table is endpoint or not table
-            rest.search endpoint, args, obj, cb
+        if not obj.locked
+          if obj.items
+            rest.destroy obj.items
+          if endpoint.route 
+            if endpoint.endpoints
+              for ep in endpoint.endpoints
+                if table is ep or not table
+                  rest.search ep, args, obj, cb
+                  break
+          else
+            if table is endpoint or not table
+              rest.search endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
     if endpoint.route and not endpoint.endpoints
@@ -249,16 +250,17 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, id) ->
       (table) ->
-        if endpoint.route
-          if endpoint.endpoints
-            if endpoint.endpoints.length
-              for ep in endpoint.endpoints
-                if table is ep or not table
-                  rest.single ep, id, obj, cb
-                  break
-        else
-          if table is endpoint or not table
-            rest.single endpoint, id, obj, cb
+        if not obj.locked
+          if endpoint.route
+            if endpoint.endpoints
+              if endpoint.endpoints.length
+                for ep in endpoint.endpoints
+                  if table is ep or not table
+                    rest.single ep, id, obj, cb
+                    break
+          else
+            if table is endpoint or not table
+              rest.single endpoint, id, obj, cb
     obj.refreshFn = RefreshFn endpoint, id
     rest.register obj.refreshFn
     if rest.okToLoad()
