@@ -70,7 +70,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           
   restoreSpecialProps = (obj, clonedProps) ->
     type = Object.prototype.toString.call obj
-    if type is '[object Array']
+    if type is '[object Array]'
       for item in obj
         for clonedItem in clonedProps
           if item[autoId] is clonedItem[autoId]
