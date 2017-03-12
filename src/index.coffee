@@ -51,6 +51,17 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       for item in obj
         destroy item
     return
+  restore = (obj) ->
+    type = Object.prototype.toString.call obj
+    if type is '[object Object]'
+      if obj.refreshFn
+        refreshFns.push obj.refreshFn
+      for key in obj
+        restore obj[key]
+    else if type is '[object Array]'
+      for item in obj
+        restore item
+    return
   cloneSpecialProps = (obj) ->
     output = null
     type = Object.prototype.toString.call obj
@@ -79,6 +90,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     else if type is '[object Object]'
       for key of clonedProps
         obj[key] = clonedProps[key]
+        restore obj[key]
     return
     
   if $injector.has 'auth'

@@ -12,7 +12,7 @@
   }
 
   module.factory('rest', function($http, $injector, $timeout) {
-    var auth, autoId, callRefreshFns, cloneSpecialProps, debounce, dereg, destroy, endpoints, listTransform, okToLoad, refreshFns, restoreSpecialProps, root, socket, waiting;
+    var auth, autoId, callRefreshFns, cloneSpecialProps, debounce, dereg, destroy, endpoints, listTransform, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
     okToLoad = false;
     endpoints = {};
     autoId = '_id';
@@ -82,6 +82,24 @@
         }
       }
     };
+    restore = function(obj) {
+      var i, item, j, key, len, len1, type;
+      type = Object.prototype.toString.call(obj);
+      if (type === '[object Object]') {
+        if (obj.refreshFn) {
+          refreshFns.push(obj.refreshFn);
+        }
+        for (i = 0, len = obj.length; i < len; i++) {
+          key = obj[i];
+          restore(obj[key]);
+        }
+      } else if (type === '[object Array]') {
+        for (j = 0, len1 = obj.length; j < len1; j++) {
+          item = obj[j];
+          restore(item);
+        }
+      }
+    };
     cloneSpecialProps = function(obj) {
       var clonedItem, i, item, key, len, output, type;
       output = null;
@@ -122,6 +140,7 @@
       } else if (type === '[object Object]') {
         for (key in clonedProps) {
           obj[key] = clonedProps[key];
+          restore(obj[key]);
         }
       }
     };
