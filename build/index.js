@@ -320,12 +320,12 @@
               rest.destroy(obj.items);
             }
             if (endpoint.route) {
-              if (endpoint.endpoints) {
+              if (endpoint.endpoints && table) {
                 ref = endpoint.endpoints;
                 results = [];
                 for (i = 0, len = ref.length; i < len; i++) {
                   ep = ref[i];
-                  if (table === ep || !table) {
+                  if (table === ep) {
                     rest.search(endpoint, args, obj, cb);
                     break;
                   } else {
@@ -333,8 +333,6 @@
                   }
                 }
                 return results;
-              } else {
-                return rest.search(endpoint, args, obj, cb);
               }
             } else {
               if (table === endpoint || !table) {
@@ -397,12 +395,12 @@
           if (!obj.locked) {
             if (endpoint.route) {
               if (endpoint.endpoints) {
-                if (endpoint.endpoints.length) {
+                if (endpoint.endpoints.length && table) {
                   ref = endpoint.endpoints;
                   results = [];
                   for (i = 0, len = ref.length; i < len; i++) {
                     ep = ref[i];
-                    if (table === ep || !table) {
+                    if (table === ep) {
                       rest.single(endpoint, id, obj, cb);
                       break;
                     } else {
@@ -410,8 +408,6 @@
                     }
                   }
                   return results;
-                } else {
-                  return rest.single(endpoint, id, obj, cb);
                 }
               }
             } else {

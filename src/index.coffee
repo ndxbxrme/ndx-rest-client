@@ -220,13 +220,11 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           if obj.items
             rest.destroy obj.items
           if endpoint.route 
-            if endpoint.endpoints
+            if endpoint.endpoints and table
               for ep in endpoint.endpoints
-                if table is ep or not table
+                if table is ep
                   rest.search endpoint, args, obj, cb
                   break
-            else
-              rest.search endpoint, args, obj, cb
           else
             if table is endpoint or not table
               rest.search endpoint, args, obj, cb
@@ -267,13 +265,11 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         if not obj.locked
           if endpoint.route
             if endpoint.endpoints
-              if endpoint.endpoints.length
+              if endpoint.endpoints.length and table
                 for ep in endpoint.endpoints
-                  if table is ep or not table
+                  if table is ep
                     rest.single endpoint, id, obj, cb
                     break
-              else
-                rest.single endpoint, id, obj, cb
           else
             if table is endpoint or not table
               rest.single endpoint, id, obj, cb
