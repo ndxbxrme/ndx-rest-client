@@ -278,10 +278,10 @@
           if (obj.item && clonedProps) {
             restoreSpecialProps(obj.item, clonedProps);
           }
-          return typeof cb === "function" ? cb(obj.item) : void 0;
+          return typeof cb === "function" ? cb(obj) : void 0;
         }, function(err) {
           obj.item = {};
-          return typeof cb === "function" ? cb(obj.item) : void 0;
+          return typeof cb === "function" ? cb(obj) : void 0;
         });
       },
       register: function(fn) {

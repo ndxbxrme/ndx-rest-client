@@ -191,10 +191,10 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       obj.item = response.data
       if obj.item and clonedProps
         restoreSpecialProps obj.item, clonedProps
-      cb? obj.item
+      cb? obj
     , (err) ->
       obj.item = {}
-      cb? obj.item
+      cb? obj
   register: (fn) ->
     refreshFns.push fn
   dereg: (fn) ->
