@@ -344,9 +344,7 @@
       };
       obj.refreshFn = RefreshFn(endpoint, args);
       rest.register(obj.refreshFn);
-      if (endpoint.route && !endpoint.endpoints) {
-        rest.search(endpoint, args, obj, cb);
-      }
+      rest.search(endpoint, args, obj, cb);
       dereg = this.$watch(function() {
         return JSON.stringify(args);
       }, function(n, o) {

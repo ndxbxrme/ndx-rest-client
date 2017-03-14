@@ -230,8 +230,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
               rest.search endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
-    if endpoint.route and not endpoint.endpoints
-      rest.search endpoint, args, obj, cb
+    #if endpoint.route and not endpoint.endpoints
+    rest.search endpoint, args, obj, cb
     dereg = @.$watch ->
       JSON.stringify args
     , (n, o) ->
