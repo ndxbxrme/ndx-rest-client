@@ -16,30 +16,27 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     page: true
     pageSize: true
     error: true
-  debounce = (func, wait, immediate) ->
-    timeout = undefined
-    ->
-      context = @
-      args = arguments
-      later = ->
-        timeout = null
-        if !immediate
-          func.apply context, args
-        return
-      callNow = immediate and !timeout
-      $timeout.cancel timeout
-      timeout = $timeout later, wait
-      if callNow
-        func.apply context, args
-      return
-  callRefreshFns = debounce () ->
+  callRefreshFns = ->
     if okToLoad and endpoints
       for key of endpoints
         if endpoints[key].needsRefresh
-          for fn in refreshFns
-            fn key
-          endpoints[key].needsRefresh = false
-  , 50
+          timeoutTime = -1
+          now = new Date().valueOf()
+          if now > endpoints[key].nextRefresh
+            if now < endpoints[key].lastRefresh + 500
+              endpoints[key].nextRefresh = endpoints[key].lastRefresh + 500
+              timeoutTime = endpoints[key].nextRefresh - now
+            else
+              timeoutTime = 0
+          if timeoutTime > -1
+            ((key, timeoutTime) ->
+              $timeout ->
+                endpoints[key].lastRefresh = new Date().valueOf()
+                for fn in refreshFns
+                  fn key  
+                endpoints[key].needsRefresh = false
+              , timeoutTime
+            ).call @, key, timeoutTime
   destroy = (obj) ->
     type = Object.prototype.toString.call obj
     if type is '[object Object]'
@@ -126,6 +123,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       for endpoint in response.data.endpoints
         endpoints[endpoint] = 
           needsRefresh: true
+          lastRefresh: 0
+          nextRefresh: 0
       if response.data.autoId
         autoId = response.data.autoId
       callRefreshFns()

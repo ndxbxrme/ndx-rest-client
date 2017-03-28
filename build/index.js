@@ -12,7 +12,7 @@
   }
 
   module.factory('rest', function($http, $injector, $timeout) {
-    var auth, autoId, callRefreshFns, cloneSpecialProps, debounce, dereg, destroy, endpoints, listTransform, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
+    var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
     okToLoad = false;
     endpoints = {};
     autoId = '_id';
@@ -25,45 +25,44 @@
       pageSize: true,
       error: true
     };
-    debounce = function(func, wait, immediate) {
-      var timeout;
-      timeout = void 0;
-      return function() {
-        var args, callNow, context, later;
-        context = this;
-        args = arguments;
-        later = function() {
-          timeout = null;
-          if (!immediate) {
-            func.apply(context, args);
-          }
-        };
-        callNow = immediate && !timeout;
-        $timeout.cancel(timeout);
-        timeout = $timeout(later, wait);
-        if (callNow) {
-          func.apply(context, args);
-        }
-      };
-    };
-    callRefreshFns = debounce(function() {
-      var fn, i, key, len, results;
+    callRefreshFns = function() {
+      var key, now, results, timeoutTime;
       if (okToLoad && endpoints) {
         results = [];
         for (key in endpoints) {
           if (endpoints[key].needsRefresh) {
-            for (i = 0, len = refreshFns.length; i < len; i++) {
-              fn = refreshFns[i];
-              fn(key);
+            timeoutTime = -1;
+            now = new Date().valueOf();
+            if (now > endpoints[key].nextRefresh) {
+              if (now < endpoints[key].lastRefresh + 500) {
+                endpoints[key].nextRefresh = endpoints[key].lastRefresh + 500;
+                timeoutTime = endpoints[key].nextRefresh - now;
+              } else {
+                timeoutTime = 0;
+              }
             }
-            results.push(endpoints[key].needsRefresh = false);
+            if (timeoutTime > -1) {
+              results.push((function(key, timeoutTime) {
+                return $timeout(function() {
+                  var fn, i, len;
+                  endpoints[key].lastRefresh = new Date().valueOf();
+                  for (i = 0, len = refreshFns.length; i < len; i++) {
+                    fn = refreshFns[i];
+                    fn(key);
+                  }
+                  return endpoints[key].needsRefresh = false;
+                }, timeoutTime);
+              }).call(this, key, timeoutTime));
+            } else {
+              results.push(void 0);
+            }
           } else {
             results.push(void 0);
           }
         }
         return results;
       }
-    }, 50);
+    };
     destroy = function(obj) {
       var i, item, j, key, len, len1, type;
       type = Object.prototype.toString.call(obj);
@@ -189,7 +188,9 @@
         for (i = 0, len = ref.length; i < len; i++) {
           endpoint = ref[i];
           endpoints[endpoint] = {
-            needsRefresh: true
+            needsRefresh: true,
+            lastRefresh: 0,
+            nextRefresh: 0
           };
         }
         if (response.data.autoId) {
