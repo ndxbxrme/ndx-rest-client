@@ -230,6 +230,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
     #if endpoint.route and not endpoint.endpoints
+    #if not rest.okToLoad()
     rest.search endpoint, args, obj, cb
     dereg = @.$watch ->
       JSON.stringify args
@@ -283,7 +284,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.endpoints[endpoint].needsRefresh = true
       obj.refreshFn obj.endpoint
     #if endpoint.route and not endpoint.endpoints
+    #if not rest.okToLoad()
     rest.single endpoint, id, obj, cb
     @.$on '$destroy', obj.destroy
-
     obj
