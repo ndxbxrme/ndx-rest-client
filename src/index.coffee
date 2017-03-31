@@ -282,8 +282,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       else
         rest.endpoints[endpoint].needsRefresh = true
       obj.refreshFn obj.endpoint
-    if endpoint.route and not endpoint.endpoints
-      rest.single endpoint, id, obj, cb
+    #if endpoint.route and not endpoint.endpoints
+    rest.single endpoint, id, obj, cb
     @.$on '$destroy', obj.destroy
 
     obj
