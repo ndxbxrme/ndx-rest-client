@@ -433,7 +433,9 @@
         }
         obj.refreshFn(obj.endpoint);
       }
-      rest.single(endpoint, id, obj, cb);
+      if (endpoint.route && !endpoint.endpoints) {
+        rest.single(endpoint, id, obj, cb);
+      }
       this.$on('$destroy', obj.destroy);
       return obj;
     };
