@@ -10,6 +10,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
   autoId = '_id'
   refreshFns = []
   waiting = false
+  ndxCheck = null
   listTransform =
     items: true
     total: true
@@ -33,7 +34,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
               $timeout ->
                 endpoints[key].lastRefresh = new Date().valueOf()
                 for fn in refreshFns
-                  fn key  
+                  fn key, endpoints[key].ids
+                endpoints[key].ids = []
                 endpoints[key].needsRefresh = false
               , timeoutTime
             ).call @, key, timeoutTime
@@ -90,6 +92,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         restore obj[key]
     return
     
+  if $injector.has 'ndxCheck'
+    ndxCheck = $injector.get 'ndxCheck'
   if $injector.has 'auth'
     okToLoad = false
     auth = $injector.get 'auth'
@@ -110,12 +114,14 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         socket.emit 'rest', {}
       socket.on 'update', (data) ->
         endpoints[data.table].needsRefresh = true
+        endpoints[data.table].ids.push data.id
         callRefreshFns()
       socket.on 'insert', (data) ->
         endpoints[data.table].needsRefresh = true
         callRefreshFns()
       socket.on 'delete', (data) ->
         endpoints[data.table].needsRefresh = true
+        endpoints[data.table].ids.push data.id
         callRefreshFns()
   $http.get '/rest/endpoints'
   .then (response) ->
@@ -125,6 +131,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           needsRefresh: true
           lastRefresh: 0
           nextRefresh: 0
+          ids: []
       if response.data.autoId
         autoId = response.data.autoId
       callRefreshFns()
@@ -138,6 +145,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
     .then (response) =>
       endpoints[endpoint].needsRefresh = true
+      ndxCheck and ndxCheck.setPristine()
       callRefreshFns endpoint
     , (err) ->
       false
@@ -145,6 +153,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     $http.delete (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}")
     .then (response) =>
       endpoints[endpoint].needsRefresh = true
+      ndxCheck and ndxCheck.setPristine()
       callRefreshFns endpoint
     , (err) ->
       false
@@ -207,10 +216,18 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       refreshFn: null
       endpoint: endpoint
       locked: false
-      save: (item) ->
-        rest.save endpoint, item
-      delete: (item) ->
-        rest.delete endpoint, item
+      save: (item, checkFn) ->
+        if checkFn
+          checkFn 'save', endpoint, item, ->
+            rest.save endpoint, item
+        else
+          rest.save endpoint, item
+      delete: (item, checkFn) ->
+        if checkFn
+          checkFn 'delete', endpoint, item, ->
+            rest.delete endpoint, item
+        else
+          rest.delete endpoint, item
       destroy: ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, args) ->
@@ -254,14 +271,24 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       refreshFn: null
       endpoint: endpoint
       locked: false
-      save: ->
-        rest.save endpoint, @.item
+      save: (checkFn) ->
+        if checkFn
+          checkFn 'save', endpoint, @.item, =>
+            rest.save endpoint, @.item
+        else
+          rest.save endpoint, @.item
       delete: ->
-        rest.delete endpoint, @.item
+        if checkFn
+          checkFn 'delete', endpoint, @.item, =>
+            rest.delete endpoint, @.item
+        else
+          rest.delete endpoint, @.item
       destroy: ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, id) ->
-      (table) ->
+      (table, ids) ->
+        if ids and ids.indexOf(id) is -1
+          return
         if not obj.locked
           if endpoint.route
             if endpoint.endpoints

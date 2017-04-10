@@ -12,12 +12,13 @@
   }
 
   module.factory('rest', function($http, $injector, $timeout) {
-    var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
+    var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
     okToLoad = false;
     endpoints = {};
     autoId = '_id';
     refreshFns = [];
     waiting = false;
+    ndxCheck = null;
     listTransform = {
       items: true,
       total: true,
@@ -48,8 +49,9 @@
                   endpoints[key].lastRefresh = new Date().valueOf();
                   for (i = 0, len = refreshFns.length; i < len; i++) {
                     fn = refreshFns[i];
-                    fn(key);
+                    fn(key, endpoints[key].ids);
                   }
+                  endpoints[key].ids = [];
                   return endpoints[key].needsRefresh = false;
                 }, timeoutTime);
               }).call(this, key, timeoutTime));
@@ -143,6 +145,9 @@
         }
       }
     };
+    if ($injector.has('ndxCheck')) {
+      ndxCheck = $injector.get('ndxCheck');
+    }
     if ($injector.has('auth')) {
       okToLoad = false;
       auth = $injector.get('auth');
@@ -169,6 +174,7 @@
         });
         socket.on('update', function(data) {
           endpoints[data.table].needsRefresh = true;
+          endpoints[data.table].ids.push(data.id);
           return callRefreshFns();
         });
         socket.on('insert', function(data) {
@@ -177,6 +183,7 @@
         });
         socket.on('delete', function(data) {
           endpoints[data.table].needsRefresh = true;
+          endpoints[data.table].ids.push(data.id);
           return callRefreshFns();
         });
       }
@@ -190,7 +197,8 @@
           endpoints[endpoint] = {
             needsRefresh: true,
             lastRefresh: 0,
-            nextRefresh: 0
+            nextRefresh: 0,
+            ids: []
           };
         }
         if (response.data.autoId) {
@@ -211,6 +219,7 @@
         return $http.post((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || '')), obj).then((function(_this) {
           return function(response) {
             endpoints[endpoint].needsRefresh = true;
+            ndxCheck && ndxCheck.setPristine();
             return callRefreshFns(endpoint);
           };
         })(this), function(err) {
@@ -221,6 +230,7 @@
         return $http["delete"]((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || ''))).then((function(_this) {
           return function(response) {
             endpoints[endpoint].needsRefresh = true;
+            ndxCheck && ndxCheck.setPristine();
             return callRefreshFns(endpoint);
           };
         })(this), function(err) {
@@ -303,11 +313,23 @@
         refreshFn: null,
         endpoint: endpoint,
         locked: false,
-        save: function(item) {
-          return rest.save(endpoint, item);
+        save: function(item, checkFn) {
+          if (checkFn) {
+            return checkFn('save', endpoint, item, function() {
+              return rest.save(endpoint, item);
+            });
+          } else {
+            return rest.save(endpoint, item);
+          }
         },
-        "delete": function(item) {
-          return rest["delete"](endpoint, item);
+        "delete": function(item, checkFn) {
+          if (checkFn) {
+            return checkFn('delete', endpoint, item, function() {
+              return rest["delete"](endpoint, item);
+            });
+          } else {
+            return rest["delete"](endpoint, item);
+          }
         },
         destroy: function() {
           return rest.dereg(obj.refreshFn);
@@ -378,19 +400,38 @@
         refreshFn: null,
         endpoint: endpoint,
         locked: false,
-        save: function() {
-          return rest.save(endpoint, this.item);
+        save: function(checkFn) {
+          if (checkFn) {
+            return checkFn('save', endpoint, this.item, (function(_this) {
+              return function() {
+                return rest.save(endpoint, _this.item);
+              };
+            })(this));
+          } else {
+            return rest.save(endpoint, this.item);
+          }
         },
         "delete": function() {
-          return rest["delete"](endpoint, this.item);
+          if (checkFn) {
+            return checkFn('delete', endpoint, this.item, (function(_this) {
+              return function() {
+                return rest["delete"](endpoint, _this.item);
+              };
+            })(this));
+          } else {
+            return rest["delete"](endpoint, this.item);
+          }
         },
         destroy: function() {
           return rest.dereg(obj.refreshFn);
         }
       };
       RefreshFn = function(endpoint, id) {
-        return function(table) {
+        return function(table, ids) {
           var ep, i, len, ref, results;
+          if (ids && ids.indexOf(id) === -1) {
+            return;
+          }
           if (!obj.locked) {
             if (endpoint.route) {
               if (endpoint.endpoints) {
