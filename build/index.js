@@ -429,7 +429,7 @@
       RefreshFn = function(endpoint, id) {
         return function(table, ids) {
           var ep, i, len, ref, results;
-          if (ids && ids.indexOf(obj.item[rest.autoId]) === -1) {
+          if (ids && obj.item && ids.indexOf(obj.item[rest.autoId]) === -1) {
             return;
           }
           if (!obj.locked) {
