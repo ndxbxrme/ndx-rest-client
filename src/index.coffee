@@ -287,7 +287,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, id) ->
       (table, ids) ->
-        if ids and ids.indexOf(id) is -1
+        if ids and ids.indexOf(obj.item[rest.autoId]) is -1
           return
         if not obj.locked
           if endpoint.route
