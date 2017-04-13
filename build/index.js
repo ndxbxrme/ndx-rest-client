@@ -367,7 +367,9 @@
       };
       obj.refreshFn = RefreshFn(endpoint, args);
       rest.register(obj.refreshFn);
-      rest.search(endpoint, args, obj, cb);
+      if (endpoint.route && !endpoint.endpoints) {
+        rest.search(endpoint, args, obj, cb);
+      }
       dereg = this.$watch(function() {
         return JSON.stringify(args);
       }, function(n, o) {
@@ -411,7 +413,7 @@
             return rest.save(endpoint, this.item);
           }
         },
-        "delete": function() {
+        "delete": function(checkFn) {
           if (checkFn) {
             return checkFn('delete', endpoint, this.item, (function(_this) {
               return function() {

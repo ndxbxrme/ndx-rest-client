@@ -246,9 +246,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
               rest.search endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
-    #if endpoint.route and not endpoint.endpoints
-    #if not rest.okToLoad()
-    rest.search endpoint, args, obj, cb
+    if endpoint.route and not endpoint.endpoints
+      rest.search endpoint, args, obj, cb
     dereg = @.$watch ->
       JSON.stringify args
     , (n, o) ->
@@ -277,7 +276,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
             rest.save endpoint, @.item
         else
           rest.save endpoint, @.item
-      delete: ->
+      delete: (checkFn) ->
         if checkFn
           checkFn 'delete', endpoint, @.item, =>
             rest.delete endpoint, @.item
