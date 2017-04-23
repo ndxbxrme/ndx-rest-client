@@ -3,7 +3,7 @@
   var objtrans;
 
   objtrans = function(input, pattern, output) {
-    var bit, bits, field, func, i, inField, index, len, myInput, type;
+    var bit, bits, field, func, i, inField, index, len, myInput, ref, type;
     if (!output) {
       output = {};
     }
@@ -49,7 +49,7 @@
             if (index === 'last') {
               index = myInput[bit].length - 1;
             }
-            myInput = myInput[bit][+index];
+            myInput = (ref = myInput[bit]) != null ? ref[+index] : void 0;
           } else {
             myInput = myInput[bit];
           }

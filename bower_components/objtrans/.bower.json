@@ -18,15 +18,15 @@
     "test",
     "tests"
   ],
-  "version": "0.0.10",
-  "_release": "0.0.10",
+  "version": "0.0.11",
+  "_release": "0.0.11",
   "_resolution": {
     "type": "version",
-    "tag": "0.0.10",
-    "commit": "09abe4b0da82fd0e804c88460278a8def994e4d4"
+    "tag": "0.0.11",
+    "commit": "24a075f821ef39ae464aac5eccfcce665d16b0a9"
   },
   "_source": "https://github.com/ndxbxrme/objtrans.git",
-  "_target": "^0.0.10",
+  "_target": "^0.0.11",
   "_originalSource": "objtrans",
   "_direct": true
 }

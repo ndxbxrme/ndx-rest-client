@@ -37,7 +37,7 @@ objtrans = (input, pattern, output) ->
             index = 0
           if index is 'last'
             index = myInput[bit].length - 1
-          myInput = myInput[bit][+index]
+          myInput = myInput[bit]?[+index]
         else
            myInput = myInput[bit]
         if myInput
