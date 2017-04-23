@@ -1,6 +1,6 @@
 'use strict'
 
-@objtrans = (input, pattern, output) ->
+objtrans = (input, pattern, output) ->
   if not output
     output = {}
   for field of pattern
@@ -47,6 +47,6 @@
           break
       output[field] = if func then (func output[field]) else output[field]
   output
-  
+@objtrans = objtrans  
 if typeof exports is 'object'
-  module.exports = @objtrans
+  module.exports = objtrans

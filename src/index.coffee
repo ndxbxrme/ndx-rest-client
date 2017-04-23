@@ -232,6 +232,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, args) ->
       (table) ->
+        console.log 'refreshFn', table
         if not obj.locked
           if obj.items
             rest.destroy obj.items
@@ -246,7 +247,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
               rest.search endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
-    if endpoint.route and not endpoint.endpoints
+    if rest.endpoints or (endpoint.route and not endpoint.endpoints)
       rest.search endpoint, args, obj, cb
     dereg = @.$watch ->
       JSON.stringify args

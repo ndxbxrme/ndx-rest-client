@@ -18,6 +18,6 @@
     "tests"
   ],
   "dependencies": {
-    "objtrans": "^0.0.6"
+    "objtrans": "^0.0.10"
   }
 }

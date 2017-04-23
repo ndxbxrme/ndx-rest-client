@@ -338,6 +338,7 @@
       RefreshFn = function(endpoint, args) {
         return function(table) {
           var ep, i, len, ref, results;
+          console.log('refreshFn', table);
           if (!obj.locked) {
             if (obj.items) {
               rest.destroy(obj.items);
@@ -367,7 +368,7 @@
       };
       obj.refreshFn = RefreshFn(endpoint, args);
       rest.register(obj.refreshFn);
-      if (endpoint.route && !endpoint.endpoints) {
+      if (rest.endpoints || (endpoint.route && !endpoint.endpoints)) {
         rest.search(endpoint, args, obj, cb);
       }
       dereg = this.$watch(function() {

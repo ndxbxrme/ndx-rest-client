@@ -1,6 +1,8 @@
 (function() {
   'use strict';
-  this.objtrans = function(input, pattern, output) {
+  var objtrans;
+
+  objtrans = function(input, pattern, output) {
     var bit, bits, field, func, i, inField, index, len, myInput, type;
     if (!output) {
       output = {};
@@ -64,8 +66,10 @@
     return output;
   };
 
+  this.objtrans = objtrans;
+
   if (typeof exports === 'object') {
-    module.exports = this.objtrans;
+    module.exports = objtrans;
   }
 
 }).call(this);
