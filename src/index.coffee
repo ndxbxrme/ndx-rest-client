@@ -232,7 +232,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.dereg obj.refreshFn
     RefreshFn = (endpoint, args) ->
       (table) ->
-        console.log 'refreshFn', table
         if not obj.locked
           if obj.items
             rest.destroy obj.items

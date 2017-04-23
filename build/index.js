@@ -338,7 +338,6 @@
       RefreshFn = function(endpoint, args) {
         return function(table) {
           var ep, i, len, ref, results;
-          console.log('refreshFn', table);
           if (!obj.locked) {
             if (obj.items) {
               rest.destroy(obj.items);
