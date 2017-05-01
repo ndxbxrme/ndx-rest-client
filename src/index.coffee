@@ -191,6 +191,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       obj.error = err
       cb? obj
   single: (endpoint, id, obj, cb) ->
+    if Object.prototype.toString.call(id) is '[object Object]'
+      id = escape JSON.stringify id
     $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}"
     .then (response) ->
       clonedProps = null

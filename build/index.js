@@ -279,6 +279,9 @@
         });
       },
       single: function(endpoint, id, obj, cb) {
+        if (Object.prototype.toString.call(id) === '[object Object]') {
+          id = escape(JSON.stringify(id));
+        }
         return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id)).then(function(response) {
           var clonedProps;
           clonedProps = null;
