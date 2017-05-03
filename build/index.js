@@ -166,28 +166,26 @@
         }
       });
     }
-    try {
-      if (io) {
-        socket = io();
-        socket.on('connect', function() {
-          return socket.emit('rest', {});
-        });
-        socket.on('update', function(data) {
-          endpoints[data.table].needsRefresh = true;
-          endpoints[data.table].ids.push(data.id);
-          return callRefreshFns();
-        });
-        socket.on('insert', function(data) {
-          endpoints[data.table].needsRefresh = true;
-          return callRefreshFns();
-        });
-        socket.on('delete', function(data) {
-          endpoints[data.table].needsRefresh = true;
-          endpoints[data.table].ids.push(data.id);
-          return callRefreshFns();
-        });
-      }
-    } catch (undefined) {}
+    if ($injector.has('socket')) {
+      socket = $injector.get('socket');
+      socket.on('connect', function() {
+        return socket.emit('rest', {});
+      });
+      socket.on('update', function(data) {
+        endpoints[data.table].needsRefresh = true;
+        endpoints[data.table].ids.push(data.id);
+        return callRefreshFns();
+      });
+      socket.on('insert', function(data) {
+        endpoints[data.table].needsRefresh = true;
+        return callRefreshFns();
+      });
+      socket.on('delete', function(data) {
+        endpoints[data.table].needsRefresh = true;
+        endpoints[data.table].ids.push(data.id);
+        return callRefreshFns();
+      });
+    }
     $http.get('/rest/endpoints').then(function(response) {
       var endpoint, i, len, ref;
       if (response.data && response.data.endpoints && response.data.endpoints.length) {

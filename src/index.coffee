@@ -107,22 +107,21 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           endpoints[endpoint].needsRefresh = true
         callRefreshFns()
         dereg()
-  try
-    if io
-      socket = io()
-      socket.on 'connect', ->
-        socket.emit 'rest', {}
-      socket.on 'update', (data) ->
-        endpoints[data.table].needsRefresh = true
-        endpoints[data.table].ids.push data.id
-        callRefreshFns()
-      socket.on 'insert', (data) ->
-        endpoints[data.table].needsRefresh = true
-        callRefreshFns()
-      socket.on 'delete', (data) ->
-        endpoints[data.table].needsRefresh = true
-        endpoints[data.table].ids.push data.id
-        callRefreshFns()
+  if $injector.has 'socket'
+    socket = $injector.get 'socket'
+    socket.on 'connect', ->
+      socket.emit 'rest', {}
+    socket.on 'update', (data) ->
+      endpoints[data.table].needsRefresh = true
+      endpoints[data.table].ids.push data.id
+      callRefreshFns()
+    socket.on 'insert', (data) ->
+      endpoints[data.table].needsRefresh = true
+      callRefreshFns()
+    socket.on 'delete', (data) ->
+      endpoints[data.table].needsRefresh = true
+      endpoints[data.table].ids.push data.id
+      callRefreshFns()
   $http.get '/rest/endpoints'
   .then (response) ->
     if response.data and response.data.endpoints and response.data.endpoints.length
