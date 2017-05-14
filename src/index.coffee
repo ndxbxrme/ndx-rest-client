@@ -105,7 +105,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         okToLoad = true
         for endpoint of endpoints
           endpoints[endpoint].needsRefresh = true
-        callRefreshFns()
         dereg()
   if $injector.has 'socket'
     socket = $injector.get 'socket'
@@ -133,7 +132,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           ids: []
       if response.data.autoId
         autoId = response.data.autoId
-      callRefreshFns()
   , (err) ->
     false
   endpoints: endpoints
@@ -308,7 +306,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           for ep in endpoint.endpoints
             rest.endpoints[ep].needsRefresh = true
       else
-        rest.endpoints[endpoint].needsRefresh = true
+        rest.endpoints[endpoint].needsRefresh = false
       obj.refreshFn obj.endpoint
     if endpoint.route and not endpoint.endpoints
       rest.single endpoint, id, obj, cb

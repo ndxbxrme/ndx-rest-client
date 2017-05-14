@@ -161,7 +161,6 @@
           for (endpoint in endpoints) {
             endpoints[endpoint].needsRefresh = true;
           }
-          callRefreshFns();
           return dereg();
         }
       });
@@ -200,9 +199,8 @@
           };
         }
         if (response.data.autoId) {
-          autoId = response.data.autoId;
+          return autoId = response.data.autoId;
         }
-        return callRefreshFns();
       }
     }, function(err) {
       return false;
@@ -473,7 +471,7 @@
             }
           }
         } else {
-          rest.endpoints[endpoint].needsRefresh = true;
+          rest.endpoints[endpoint].needsRefresh = false;
         }
         obj.refreshFn(obj.endpoint);
       }
