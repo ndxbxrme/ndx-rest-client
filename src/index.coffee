@@ -251,12 +251,14 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       JSON.stringify args
     , (n, o) ->
       if n and rest.okToLoad()
+        ###
         if endpoint.route
           if endpoint.endpoints and endpoint.endpoints.length
             for ep in endpoint.endpoints
               rest.endpoints[ep].needsRefresh = true
         else
           rest.endpoints[endpoint].needsRefresh = true
+        ###
         obj.refreshFn obj.endpoint
     , true
     @.$on '$destroy', ->
@@ -301,12 +303,14 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     obj.refreshFn = RefreshFn endpoint, id
     rest.register obj.refreshFn
     if rest.okToLoad()
+      ###
       if endpoint.route
         if endpoint.endpoints
           for ep in endpoint.endpoints
             rest.endpoints[ep].needsRefresh = true
       else
         rest.endpoints[endpoint].needsRefresh = false
+      ###
       obj.refreshFn obj.endpoint
     if endpoint.route and not endpoint.endpoints
       rest.single endpoint, id, obj, cb

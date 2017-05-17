@@ -372,19 +372,16 @@
       dereg = this.$watch(function() {
         return JSON.stringify(args);
       }, function(n, o) {
-        var ep, i, len, ref;
         if (n && rest.okToLoad()) {
-          if (endpoint.route) {
-            if (endpoint.endpoints && endpoint.endpoints.length) {
-              ref = endpoint.endpoints;
-              for (i = 0, len = ref.length; i < len; i++) {
-                ep = ref[i];
-                rest.endpoints[ep].needsRefresh = true;
-              }
-            }
-          } else {
-            rest.endpoints[endpoint].needsRefresh = true;
-          }
+
+          /*
+          if endpoint.route
+            if endpoint.endpoints and endpoint.endpoints.length
+              for ep in endpoint.endpoints
+                rest.endpoints[ep].needsRefresh = true
+          else
+            rest.endpoints[endpoint].needsRefresh = true
+           */
           return obj.refreshFn(obj.endpoint);
         }
       }, true);
@@ -395,7 +392,7 @@
       return obj;
     };
     return root.single = function(endpoint, id, cb) {
-      var RefreshFn, ep, i, len, obj, ref;
+      var RefreshFn, obj;
       obj = {
         item: null,
         refreshFn: null,
@@ -462,17 +459,15 @@
       obj.refreshFn = RefreshFn(endpoint, id);
       rest.register(obj.refreshFn);
       if (rest.okToLoad()) {
-        if (endpoint.route) {
-          if (endpoint.endpoints) {
-            ref = endpoint.endpoints;
-            for (i = 0, len = ref.length; i < len; i++) {
-              ep = ref[i];
-              rest.endpoints[ep].needsRefresh = true;
-            }
-          }
-        } else {
-          rest.endpoints[endpoint].needsRefresh = false;
-        }
+
+        /*
+        if endpoint.route
+          if endpoint.endpoints
+            for ep in endpoint.endpoints
+              rest.endpoints[ep].needsRefresh = true
+        else
+          rest.endpoints[endpoint].needsRefresh = false
+         */
         obj.refreshFn(obj.endpoint);
       }
       if (endpoint.route && !endpoint.endpoints) {
