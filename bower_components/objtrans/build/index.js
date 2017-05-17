@@ -3,7 +3,7 @@
   var objtrans;
 
   objtrans = function(input, pattern, output) {
-    var bit, bits, field, func, i, inField, index, len, myInput, type;
+    var bit, bits, e, error, field, func, i, inField, index, len, myInput, type;
     if (!output) {
       output = {};
     }
@@ -34,7 +34,12 @@
         }
       } else if (type === '[object String]') {
         bits = pattern[field].split(/\./g);
-        myInput = JSON.parse(JSON.stringify(input));
+        try {
+          myInput = JSON.parse(JSON.stringify(input));
+        } catch (error) {
+          e = error;
+          myInput = input;
+        }
         for (i = 0, len = bits.length; i < len; i++) {
           bit = bits[i];
           index = -1;

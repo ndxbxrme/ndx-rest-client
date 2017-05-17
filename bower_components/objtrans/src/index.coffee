@@ -26,7 +26,10 @@ objtrans = (input, pattern, output) ->
         output[field] = objtrans input, pattern[field]
     else if type is '[object String]'
       bits = pattern[field].split(/\./g)
-      myInput = JSON.parse JSON.stringify input
+      try
+        myInput = JSON.parse JSON.stringify input
+      catch e
+        myInput = input
       for bit in bits
         index = -1
         bit = bit.replace /\[(.+)\]$|$/, (all, num) ->
