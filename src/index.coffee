@@ -11,6 +11,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
   refreshFns = []
   waiting = false
   ndxCheck = null
+  needsRefresh = false
   listTransform =
     items: true
     total: true
@@ -105,6 +106,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         okToLoad = true
         for endpoint of endpoints
           endpoints[endpoint].needsRefresh = true
+        if needsRefresh
+          callRefreshFns()
         dereg()
   if $injector.has 'socket'
     socket = $injector.get 'socket'
@@ -132,10 +135,14 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           ids: []
       if response.data.autoId
         autoId = response.data.autoId
+      if needsRefresh
+        callRefreshFns()
   , (err) ->
     false
   endpoints: endpoints
   autoId: autoId
+  needsRefresh: (val) ->
+    needsRefresh = val
   okToLoad: ->
     okToLoad
   save: (endpoint, obj) ->
@@ -260,6 +267,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           rest.endpoints[endpoint].needsRefresh = true
         ###
         obj.refreshFn obj.endpoint
+      else
+        rest.needsRefresh true
     , true
     @.$on '$destroy', ->
       dereg()
@@ -312,6 +321,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         rest.endpoints[endpoint].needsRefresh = false
       ###
       obj.refreshFn obj.endpoint
+    else
+      rest.needsRefresh true
     if endpoint.route and not endpoint.endpoints
       rest.single endpoint, id, obj, cb
     @.$on '$destroy', obj.destroy

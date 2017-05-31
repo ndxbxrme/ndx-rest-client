@@ -12,13 +12,14 @@
   }
 
   module.factory('rest', function($http, $injector, $timeout) {
-    var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
+    var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
     okToLoad = false;
     endpoints = {};
     autoId = '_id';
     refreshFns = [];
     waiting = false;
     ndxCheck = null;
+    needsRefresh = false;
     listTransform = {
       items: true,
       total: true,
@@ -161,6 +162,9 @@
           for (endpoint in endpoints) {
             endpoints[endpoint].needsRefresh = true;
           }
+          if (needsRefresh) {
+            callRefreshFns();
+          }
           return dereg();
         }
       });
@@ -199,7 +203,10 @@
           };
         }
         if (response.data.autoId) {
-          return autoId = response.data.autoId;
+          autoId = response.data.autoId;
+        }
+        if (needsRefresh) {
+          return callRefreshFns();
         }
       }
     }, function(err) {
@@ -208,6 +215,9 @@
     return {
       endpoints: endpoints,
       autoId: autoId,
+      needsRefresh: function(val) {
+        return needsRefresh = val;
+      },
       okToLoad: function() {
         return okToLoad;
       },
@@ -383,6 +393,8 @@
             rest.endpoints[endpoint].needsRefresh = true
            */
           return obj.refreshFn(obj.endpoint);
+        } else {
+          return rest.needsRefresh(true);
         }
       }, true);
       this.$on('$destroy', function() {
@@ -469,6 +481,8 @@
           rest.endpoints[endpoint].needsRefresh = false
          */
         obj.refreshFn(obj.endpoint);
+      } else {
+        rest.needsRefresh(true);
       }
       if (endpoint.route && !endpoint.endpoints) {
         rest.single(endpoint, id, obj, cb);
