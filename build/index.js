@@ -157,16 +157,14 @@
         return auth.getUser();
       }, function(n) {
         var endpoint;
-        if (n) {
-          okToLoad = true;
-          for (endpoint in endpoints) {
-            endpoints[endpoint].needsRefresh = true;
-          }
-          if (needsRefresh) {
-            callRefreshFns();
-          }
-          return dereg();
+        okToLoad = true;
+        for (endpoint in endpoints) {
+          endpoints[endpoint].needsRefresh = true;
         }
+        if (needsRefresh) {
+          callRefreshFns();
+        }
+        return dereg();
       });
     }
     if ($injector.has('socket')) {
