@@ -95,9 +95,9 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     
   if $injector.has 'ndxCheck'
     ndxCheck = $injector.get 'ndxCheck'
-  if $injector.has 'auth'
+  if $injector.has 'Auth'
     okToLoad = false
-    auth = $injector.get 'auth'
+    auth = $injector.get 'Auth'
     root = $injector.get '$rootScope'
     dereg = root.$watch ->
       auth.getUser()
