@@ -71,7 +71,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
         clonedItem = cloneSpecialProps item
         clonedItem[autoId] = item[autoId]
         output.push clonedItem
-        break
     else if type is '[object Object]'
       output = {}
       for key of obj

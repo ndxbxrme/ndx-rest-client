@@ -113,7 +113,6 @@
           clonedItem = cloneSpecialProps(item);
           clonedItem[autoId] = item[autoId];
           output.push(clonedItem);
-          break;
         }
       } else if (type === '[object Object]') {
         output = {};
