@@ -12,7 +12,7 @@
   }
 
   module.factory('rest', function($http, $injector, $timeout) {
-    var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
+    var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, throttle, waiting;
     okToLoad = false;
     endpoints = {};
     autoId = '_id';
@@ -27,38 +27,61 @@
       pageSize: true,
       error: true
     };
+    throttle = function(func, wait, options) {
+      var args, context, later, previous, result, timeout;
+      context = void 0;
+      args = void 0;
+      result = void 0;
+      timeout = null;
+      previous = 0;
+      if (!options) {
+        options = {};
+      }
+      later = function() {
+        previous = options.leading === false ? 0 : Date.now();
+        timeout = null;
+        result = func.apply(context, args);
+        if (!timeout) {
+          context = args = null;
+        }
+      };
+      return function() {
+        var now, remaining;
+        now = Date.now();
+        if (!previous && options.leading === false) {
+          previous = now;
+        }
+        remaining = wait - (now - previous);
+        context = this;
+        args = arguments;
+        if (remaining <= 0 || remaining > wait) {
+          if (timeout) {
+            clearTimeout(timeout);
+            timeout = null;
+          }
+          previous = now;
+          result = func.apply(context, args);
+          if (!timeout) {
+            context = args = null;
+          }
+        } else if (!timeout && options.trailing !== false) {
+          timeout = setTimeout(later, remaining);
+        }
+        return result;
+      };
+    };
     callRefreshFns = function() {
-      var key, now, results, timeoutTime;
+      var fn, i, key, len, results;
       if (okToLoad && endpoints) {
         results = [];
         for (key in endpoints) {
           if (endpoints[key].needsRefresh) {
-            timeoutTime = -1;
-            now = new Date().valueOf();
-            if (now > endpoints[key].nextRefresh) {
-              if (now < endpoints[key].lastRefresh + 500) {
-                endpoints[key].nextRefresh = endpoints[key].lastRefresh + 500;
-                timeoutTime = endpoints[key].nextRefresh - now;
-              } else {
-                timeoutTime = 0;
-              }
+            for (i = 0, len = refreshFns.length; i < len; i++) {
+              fn = refreshFns[i];
+              fn(key, endpoints[key].ids);
             }
-            if (timeoutTime > -1) {
-              results.push((function(key, timeoutTime) {
-                return $timeout(function() {
-                  var fn, i, len;
-                  endpoints[key].lastRefresh = new Date().valueOf();
-                  for (i = 0, len = refreshFns.length; i < len; i++) {
-                    fn = refreshFns[i];
-                    fn(key, endpoints[key].ids);
-                  }
-                  endpoints[key].ids = [];
-                  return endpoints[key].needsRefresh = false;
-                }, timeoutTime);
-              }).call(this, key, timeoutTime));
-            } else {
-              results.push(void 0);
-            }
+            endpoints[key].ids = [];
+            results.push(endpoints[key].needsRefresh = false);
           } else {
             results.push(void 0);
           }
@@ -313,7 +336,7 @@
     var root;
     root = Object.getPrototypeOf($rootScope);
     root.list = function(endpoint, args, cb) {
-      var RefreshFn, dereg, obj;
+      var RefreshFn, dereg, obj, throttledSearch;
       obj = {
         items: null,
         refreshFn: null,
@@ -341,6 +364,7 @@
           return rest.dereg(obj.refreshFn);
         }
       };
+      throttledSearch = throttle(rest.search, 1000);
       RefreshFn = function(endpoint, args) {
         return function(table) {
           var ep, i, len, ref, results;
@@ -355,7 +379,7 @@
                 for (i = 0, len = ref.length; i < len; i++) {
                   ep = ref[i];
                   if (table === ep) {
-                    rest.search(endpoint, args, obj, cb);
+                    throttledSearch(endpoint, args, obj, cb);
                     break;
                   } else {
                     results.push(void 0);
@@ -365,7 +389,7 @@
               }
             } else {
               if (table === endpoint || !table) {
-                return rest.search(endpoint, args, obj, cb);
+                return throttledSearch(endpoint, args, obj, cb);
               }
             }
           }
@@ -401,7 +425,7 @@
       return obj;
     };
     return root.single = function(endpoint, id, cb) {
-      var RefreshFn, obj;
+      var RefreshFn, obj, throttledSingle;
       obj = {
         item: null,
         refreshFn: null,
@@ -433,6 +457,7 @@
           return rest.dereg(obj.refreshFn);
         }
       };
+      throttledSingle = throttle(rest.single, 1000);
       RefreshFn = function(endpoint, id) {
         return function(table, ids) {
           var ep, i, len, ref, results;
@@ -448,7 +473,7 @@
                   for (i = 0, len = ref.length; i < len; i++) {
                     ep = ref[i];
                     if (table === ep) {
-                      rest.single(endpoint, id, obj, cb);
+                      throttledSingle(endpoint, id, obj, cb);
                       break;
                     } else {
                       results.push(void 0);
@@ -459,7 +484,7 @@
               }
             } else {
               if (table === endpoint || !table) {
-                return rest.single(endpoint, id, obj, cb);
+                return throttledSingle(endpoint, id, obj, cb);
               }
             }
           }

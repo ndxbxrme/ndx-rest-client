@@ -18,28 +18,48 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     page: true
     pageSize: true
     error: true
+  #borrowed from underscore.js
+  throttle = (func, wait, options) ->
+    context = undefined
+    args = undefined
+    result = undefined
+    timeout = null
+    previous = 0
+    if !options
+      options = {}
+    later = ->
+      previous = if options.leading == false then 0 else Date.now()
+      timeout = null
+      result = func.apply(context, args)
+      if !timeout
+        context = args = null
+      return
+    ->
+      now = Date.now()
+      if !previous and options.leading == false
+        previous = now
+      remaining = wait - (now - previous)
+      context = this
+      args = arguments
+      if remaining <= 0 or remaining > wait
+        if timeout
+          clearTimeout timeout
+          timeout = null
+        previous = now
+        result = func.apply(context, args)
+        if !timeout
+          context = args = null
+      else if !timeout and options.trailing != false
+        timeout = setTimeout(later, remaining)
+      result
   callRefreshFns = ->
     if okToLoad and endpoints
       for key of endpoints
         if endpoints[key].needsRefresh
-          timeoutTime = -1
-          now = new Date().valueOf()
-          if now > endpoints[key].nextRefresh
-            if now < endpoints[key].lastRefresh + 500
-              endpoints[key].nextRefresh = endpoints[key].lastRefresh + 500
-              timeoutTime = endpoints[key].nextRefresh - now
-            else
-              timeoutTime = 0
-          if timeoutTime > -1
-            ((key, timeoutTime) ->
-              $timeout ->
-                endpoints[key].lastRefresh = new Date().valueOf()
-                for fn in refreshFns
-                  fn key, endpoints[key].ids
-                endpoints[key].ids = []
-                endpoints[key].needsRefresh = false
-              , timeoutTime
-            ).call @, key, timeoutTime
+          for fn in refreshFns
+            fn key, endpoints[key].ids
+          endpoints[key].ids = []
+          endpoints[key].needsRefresh = false
   destroy = (obj) ->
     type = Object.prototype.toString.call obj
     if type is '[object Object]'
@@ -235,6 +255,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           rest.delete endpoint, item
       destroy: ->
         rest.dereg obj.refreshFn
+    throttledSearch = throttle rest.search, 1000
     RefreshFn = (endpoint, args) ->
       (table) ->
         if not obj.locked
@@ -244,11 +265,11 @@ module.factory 'rest', ($http, $injector, $timeout) ->
             if endpoint.endpoints and table
               for ep in endpoint.endpoints
                 if table is ep
-                  rest.search endpoint, args, obj, cb
+                  throttledSearch endpoint, args, obj, cb
                   break
           else
             if table is endpoint or not table
-              rest.search endpoint, args, obj, cb
+              throttledSearch endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
     if rest.endpoints or (endpoint.route and not endpoint.endpoints)
@@ -293,6 +314,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
           rest.delete endpoint, @.item
       destroy: ->
         rest.dereg obj.refreshFn
+    throttledSingle = throttle rest.single, 1000
     RefreshFn = (endpoint, id) ->
       (table, ids) ->
         if ids and obj.item and ids.indexOf(obj.item[rest.autoId]) is -1
@@ -303,11 +325,11 @@ module.factory 'rest', ($http, $injector, $timeout) ->
               if endpoint.endpoints.length and table
                 for ep in endpoint.endpoints
                   if table is ep
-                    rest.single endpoint, id, obj, cb
+                    throttledSingle endpoint, id, obj, cb
                     break
           else
             if table is endpoint or not table
-              rest.single endpoint, id, obj, cb
+              throttledSingle endpoint, id, obj, cb
     obj.refreshFn = RefreshFn endpoint, id
     rest.register obj.refreshFn
     if rest.okToLoad()
