@@ -5,7 +5,7 @@ try
 catch e
   module =angular.module 'ndx', []
 module.factory 'rest', ($http, $injector, $timeout) ->
-  okToLoad = false
+  okToLoad = true
   endpoints = {}
   autoId = '_id'
   refreshFns = []
