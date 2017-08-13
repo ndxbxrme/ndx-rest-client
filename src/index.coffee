@@ -18,40 +18,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     page: true
     pageSize: true
     error: true
-  #borrowed from underscore.js
-  throttle = (func, wait, options) ->
-    context = undefined
-    args = undefined
-    result = undefined
-    timeout = null
-    previous = 0
-    if !options
-      options = {}
-    later = ->
-      previous = if options.leading == false then 0 else Date.now()
-      timeout = null
-      result = func.apply(context, args)
-      if !timeout
-        context = args = null
-      return
-    ->
-      now = Date.now()
-      if !previous and options.leading == false
-        previous = now
-      remaining = wait - (now - previous)
-      context = this
-      args = arguments
-      if remaining <= 0 or remaining > wait
-        if timeout
-          clearTimeout timeout
-          timeout = null
-        previous = now
-        result = func.apply(context, args)
-        if !timeout
-          context = args = null
-      else if !timeout and options.trailing != false
-        timeout = setTimeout(later, remaining)
-      result
   callRefreshFns = ->
     if okToLoad and endpoints
       for key of endpoints
@@ -234,6 +200,41 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     refreshFns.splice refreshFns.indexOf(fn), 1
   destroy: destroy
 .run ($rootScope, $http, rest) ->
+  #borrowed from underscore.js
+  throttle = (func, wait, options) ->
+    context = undefined
+    args = undefined
+    result = undefined
+    timeout = null
+    previous = 0
+    if !options
+      options = {}
+    later = ->
+      previous = if options.leading == false then 0 else Date.now()
+      timeout = null
+      result = func.apply(context, args)
+      if !timeout
+        context = args = null
+      return
+    ->
+      now = Date.now()
+      if !previous and options.leading == false
+        previous = now
+      remaining = wait - (now - previous)
+      context = this
+      args = arguments
+      if remaining <= 0 or remaining > wait
+        if timeout
+          clearTimeout timeout
+          timeout = null
+        previous = now
+        result = func.apply(context, args)
+        if !timeout
+          context = args = null
+      else if !timeout and options.trailing != false
+        timeout = setTimeout(later, remaining)
+      result
+      
   root = Object.getPrototypeOf $rootScope
   root.list = (endpoint, args, cb) ->
     obj =
