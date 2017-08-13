@@ -13,7 +13,7 @@
 
   module.factory('rest', function($http, $injector, $timeout) {
     var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
-    okToLoad = false;
+    okToLoad = true;
     endpoints = {};
     autoId = '_id';
     refreshFns = [];
