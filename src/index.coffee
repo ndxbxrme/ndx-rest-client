@@ -5,6 +5,9 @@ try
 catch e
   module =angular.module 'ndx', []
 module.provider 'rest', ->
+  waitForAuth = false
+  waitForAuth: (val) ->
+    waitForAuth = val
   $get: ($http, $injector, $timeout) ->
     okToLoad = true
     endpoints = {}
@@ -81,7 +84,7 @@ module.provider 'rest', ->
 
     if $injector.has 'ndxCheck'
       ndxCheck = $injector.get 'ndxCheck'
-    if $injector.has 'Auth'
+    if $injector.has 'Auth' and waitForAuth
       okToLoad = false
       auth = $injector.get 'Auth'
       root = $injector.get '$rootScope'

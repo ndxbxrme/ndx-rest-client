@@ -12,7 +12,12 @@
   }
 
   module.provider('rest', function() {
+    var waitForAuth;
+    waitForAuth = false;
     return {
+      waitForAuth: function(val) {
+        return waitForAuth = val;
+      },
       $get: function($http, $injector, $timeout) {
         var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
         okToLoad = true;
@@ -130,7 +135,7 @@
         if ($injector.has('ndxCheck')) {
           ndxCheck = $injector.get('ndxCheck');
         }
-        if ($injector.has('Auth')) {
+        if ($injector.has('Auth' && waitForAuth)) {
           okToLoad = false;
           auth = $injector.get('Auth');
           root = $injector.get('$rootScope');
