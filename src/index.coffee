@@ -19,6 +19,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     pageSize: true
     error: true
   callRefreshFns = ->
+    console.trace()
     if okToLoad and endpoints
       for key of endpoints
         if endpoints[key].needsRefresh
