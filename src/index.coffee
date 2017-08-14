@@ -4,201 +4,202 @@ try
   module = angular.module 'ndx'
 catch e
   module =angular.module 'ndx', []
-module.factory 'rest', ($http, $injector, $timeout) ->
-  okToLoad = true
-  endpoints = {}
-  autoId = '_id'
-  refreshFns = []
-  waiting = false
-  ndxCheck = null
-  needsRefresh = false
-  listTransform =
-    items: true
-    total: true
-    page: true
-    pageSize: true
-    error: true
-  callRefreshFns = ->
-    if okToLoad and endpoints
-      for key of endpoints
-        if endpoints[key].needsRefresh
-          for fn in refreshFns
-            fn key, endpoints[key].ids
-          endpoints[key].ids = []
-          endpoints[key].needsRefresh = false
-  destroy = (obj) ->
-    type = Object.prototype.toString.call obj
-    if type is '[object Object]'
-      if obj.destroy
-        obj.destroy()
-      for key in obj
-        destroy obj[key]
-    else if type is '[object Array]'
-      for item in obj
-        destroy item
-    return
-  restore = (obj) ->
-    type = Object.prototype.toString.call obj
-    if type is '[object Object]'
-      if obj.refreshFn
-        refreshFns.push obj.refreshFn
-      for key in obj
-        restore obj[key]
-    else if type is '[object Array]'
-      for item in obj
-        restore item
-    return
-  cloneSpecialProps = (obj) ->
-    output = null
-    type = Object.prototype.toString.call obj
-    if type is '[object Array]'
-      output = []
-      for item in obj
-        clonedItem = cloneSpecialProps item
-        clonedItem[autoId] = item[autoId]
-        output.push clonedItem
-    else if type is '[object Object]'
-      output = {}
-      for key of obj
-        if key.indexOf('$') is 0
-          output[key] = obj[key]
-    output
-          
-  restoreSpecialProps = (obj, clonedProps) ->
-    type = Object.prototype.toString.call obj
-    if type is '[object Array]'
-      for item in obj
-        for clonedItem in clonedProps
-          if item[autoId] is clonedItem[autoId]
-            restoreSpecialProps item, clonedItem
-            break
-    else if type is '[object Object]'
-      for key of clonedProps
-        obj[key] = clonedProps[key]
-        restore obj[key]
-    return
-    
-  if $injector.has 'ndxCheck'
-    ndxCheck = $injector.get 'ndxCheck'
-  if $injector.has 'Auth'
-    okToLoad = false
-    auth = $injector.get 'Auth'
-    root = $injector.get '$rootScope'
-    dereg = root.$watch ->
-      auth.getUser()
-    , (n) ->
-      if n
-        okToLoad = true
-        for endpoint of endpoints
-          endpoints[endpoint].needsRefresh = true
+module.provider 'rest', ->
+  $get: ($http, $injector, $timeout) ->
+    okToLoad = true
+    endpoints = {}
+    autoId = '_id'
+    refreshFns = []
+    waiting = false
+    ndxCheck = null
+    needsRefresh = false
+    listTransform =
+      items: true
+      total: true
+      page: true
+      pageSize: true
+      error: true
+    callRefreshFns = ->
+      if okToLoad and endpoints
+        for key of endpoints
+          if endpoints[key].needsRefresh
+            for fn in refreshFns
+              fn key, endpoints[key].ids
+            endpoints[key].ids = []
+            endpoints[key].needsRefresh = false
+    destroy = (obj) ->
+      type = Object.prototype.toString.call obj
+      if type is '[object Object]'
+        if obj.destroy
+          obj.destroy()
+        for key in obj
+          destroy obj[key]
+      else if type is '[object Array]'
+        for item in obj
+          destroy item
+      return
+    restore = (obj) ->
+      type = Object.prototype.toString.call obj
+      if type is '[object Object]'
+        if obj.refreshFn
+          refreshFns.push obj.refreshFn
+        for key in obj
+          restore obj[key]
+      else if type is '[object Array]'
+        for item in obj
+          restore item
+      return
+    cloneSpecialProps = (obj) ->
+      output = null
+      type = Object.prototype.toString.call obj
+      if type is '[object Array]'
+        output = []
+        for item in obj
+          clonedItem = cloneSpecialProps item
+          clonedItem[autoId] = item[autoId]
+          output.push clonedItem
+      else if type is '[object Object]'
+        output = {}
+        for key of obj
+          if key.indexOf('$') is 0
+            output[key] = obj[key]
+      output
+
+    restoreSpecialProps = (obj, clonedProps) ->
+      type = Object.prototype.toString.call obj
+      if type is '[object Array]'
+        for item in obj
+          for clonedItem in clonedProps
+            if item[autoId] is clonedItem[autoId]
+              restoreSpecialProps item, clonedItem
+              break
+      else if type is '[object Object]'
+        for key of clonedProps
+          obj[key] = clonedProps[key]
+          restore obj[key]
+      return
+
+    if $injector.has 'ndxCheck'
+      ndxCheck = $injector.get 'ndxCheck'
+    if $injector.has 'Auth'
+      okToLoad = false
+      auth = $injector.get 'Auth'
+      root = $injector.get '$rootScope'
+      dereg = root.$watch ->
+        auth.getUser()
+      , (n) ->
+        if n
+          okToLoad = true
+          for endpoint of endpoints
+            endpoints[endpoint].needsRefresh = true
+          if needsRefresh
+            callRefreshFns()
+          dereg()
+    if $injector.has 'socket'
+      socket = $injector.get 'socket'
+      socket.on 'connect', ->
+        socket.emit 'rest', {}
+      socket.on 'update', (data) ->
+        endpoints[data.table].needsRefresh = true
+        endpoints[data.table].ids.push data.id
+        callRefreshFns()
+      socket.on 'insert', (data) ->
+        endpoints[data.table].needsRefresh = true
+        callRefreshFns()
+      socket.on 'delete', (data) ->
+        endpoints[data.table].needsRefresh = true
+        endpoints[data.table].ids.push data.id
+        callRefreshFns()
+    $http.get '/rest/endpoints'
+    .then (response) ->
+      if response.data and response.data.endpoints and response.data.endpoints.length
+        for endpoint in response.data.endpoints
+          endpoints[endpoint] = 
+            needsRefresh: true
+            lastRefresh: 0
+            nextRefresh: 0
+            ids: []
+        if response.data.autoId
+          autoId = response.data.autoId
         if needsRefresh
           callRefreshFns()
-        dereg()
-  if $injector.has 'socket'
-    socket = $injector.get 'socket'
-    socket.on 'connect', ->
-      socket.emit 'rest', {}
-    socket.on 'update', (data) ->
-      endpoints[data.table].needsRefresh = true
-      endpoints[data.table].ids.push data.id
-      callRefreshFns()
-    socket.on 'insert', (data) ->
-      endpoints[data.table].needsRefresh = true
-      callRefreshFns()
-    socket.on 'delete', (data) ->
-      endpoints[data.table].needsRefresh = true
-      endpoints[data.table].ids.push data.id
-      callRefreshFns()
-  $http.get '/rest/endpoints'
-  .then (response) ->
-    if response.data and response.data.endpoints and response.data.endpoints.length
-      for endpoint in response.data.endpoints
-        endpoints[endpoint] = 
-          needsRefresh: true
-          lastRefresh: 0
-          nextRefresh: 0
-          ids: []
-      if response.data.autoId
-        autoId = response.data.autoId
-      if needsRefresh
-        callRefreshFns()
-  , (err) ->
-    false
-  endpoints: endpoints
-  autoId: autoId
-  needsRefresh: (val) ->
-    needsRefresh = val
-  okToLoad: ->
-    okToLoad
-  save: (endpoint, obj) ->
-    $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
-    .then (response) =>
-      endpoints[endpoint].needsRefresh = true
-      ndxCheck and ndxCheck.setPristine()
-      callRefreshFns endpoint
     , (err) ->
       false
-  'delete': (endpoint, obj) ->
-    $http.delete (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}")
-    .then (response) =>
-      endpoints[endpoint].needsRefresh = true
-      ndxCheck and ndxCheck.setPristine()
-      callRefreshFns endpoint
-    , (err) ->
-      false
-  search: (endpoint, args, obj, cb) ->
-    args = args or {}
-    $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
-    .then (response) ->
-      clonedProps = null
-      if obj.items and obj.items.length
-        clonedProps = cloneSpecialProps obj.items
-      objtrans response.data, (args.transform or listTransform), obj
-      if obj.items and obj.items.length and clonedProps
-        restoreSpecialProps obj.items, clonedProps
-      cb? obj
-    , (err) ->
-      obj.items = []
-      obj.total = 0
-      obj.page = 1
-      obj.error = err
-      cb? obj
-  list: (endpoint, obj, cb) ->
-    $http.post (endpoint.route or "/api/#{endpoint}")
-    .then (response) ->
-      clonedProps = null
-      if obj.items and obj.items.length
-        clonedProps = cloneSpecialProps obj.items
-      objtrans response.data, (args.transform or listTransform), obj
-      if obj.items and obj.items.length and clonedProps
-        restoreSpecialProps obj.items, clonedProps
-      cb? obj
-    , (err) ->
-      obj.items = []
-      obj.total = 0
-      obj.page = 1
-      obj.error = err
-      cb? obj
-  single: (endpoint, id, obj, cb) ->
-    if Object.prototype.toString.call(id) is '[object Object]'
-      id = escape JSON.stringify id
-    $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}"
-    .then (response) ->
-      clonedProps = null
-      if obj.item
-        clonedProps = cloneSpecialProps obj.items
-      obj.item = response.data
-      if obj.item and clonedProps
-        restoreSpecialProps obj.item, clonedProps
-      cb? obj
-    , (err) ->
-      obj.item = {}
-      cb? obj
-  register: (fn) ->
-    refreshFns.push fn
-  dereg: (fn) ->
-    refreshFns.splice refreshFns.indexOf(fn), 1
-  destroy: destroy
+    endpoints: endpoints
+    autoId: autoId
+    needsRefresh: (val) ->
+      needsRefresh = val
+    okToLoad: ->
+      okToLoad
+    save: (endpoint, obj) ->
+      $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
+      .then (response) =>
+        endpoints[endpoint].needsRefresh = true
+        ndxCheck and ndxCheck.setPristine()
+        callRefreshFns endpoint
+      , (err) ->
+        false
+    'delete': (endpoint, obj) ->
+      $http.delete (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}")
+      .then (response) =>
+        endpoints[endpoint].needsRefresh = true
+        ndxCheck and ndxCheck.setPristine()
+        callRefreshFns endpoint
+      , (err) ->
+        false
+    search: (endpoint, args, obj, cb) ->
+      args = args or {}
+      $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
+      .then (response) ->
+        clonedProps = null
+        if obj.items and obj.items.length
+          clonedProps = cloneSpecialProps obj.items
+        objtrans response.data, (args.transform or listTransform), obj
+        if obj.items and obj.items.length and clonedProps
+          restoreSpecialProps obj.items, clonedProps
+        cb? obj
+      , (err) ->
+        obj.items = []
+        obj.total = 0
+        obj.page = 1
+        obj.error = err
+        cb? obj
+    list: (endpoint, obj, cb) ->
+      $http.post (endpoint.route or "/api/#{endpoint}")
+      .then (response) ->
+        clonedProps = null
+        if obj.items and obj.items.length
+          clonedProps = cloneSpecialProps obj.items
+        objtrans response.data, (args.transform or listTransform), obj
+        if obj.items and obj.items.length and clonedProps
+          restoreSpecialProps obj.items, clonedProps
+        cb? obj
+      , (err) ->
+        obj.items = []
+        obj.total = 0
+        obj.page = 1
+        obj.error = err
+        cb? obj
+    single: (endpoint, id, obj, cb) ->
+      if Object.prototype.toString.call(id) is '[object Object]'
+        id = escape JSON.stringify id
+      $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}"
+      .then (response) ->
+        clonedProps = null
+        if obj.item
+          clonedProps = cloneSpecialProps obj.items
+        obj.item = response.data
+        if obj.item and clonedProps
+          restoreSpecialProps obj.item, clonedProps
+        cb? obj
+      , (err) ->
+        obj.item = {}
+        cb? obj
+    register: (fn) ->
+      refreshFns.push fn
+    dereg: (fn) ->
+      refreshFns.splice refreshFns.indexOf(fn), 1
+    destroy: destroy
 .run ($rootScope, $http, rest) ->
   #borrowed from underscore.js
   throttle = (func, wait, options) ->
