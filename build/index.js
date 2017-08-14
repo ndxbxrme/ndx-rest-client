@@ -29,6 +29,7 @@
     };
     callRefreshFns = function() {
       var fn, i, key, len, results;
+      console.trace();
       if (okToLoad && endpoints) {
         results = [];
         for (key in endpoints) {
