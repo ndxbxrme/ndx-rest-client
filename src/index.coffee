@@ -84,8 +84,7 @@ module.provider 'rest', ->
 
     if $injector.has 'ndxCheck'
       ndxCheck = $injector.get 'ndxCheck'
-    console.log 'wait for auth', waitForAuth
-    if $injector.has 'Auth' and waitForAuth
+    if $injector.has('Auth') and waitForAuth
       okToLoad = false
       auth = $injector.get 'Auth'
       root = $injector.get '$rootScope'
