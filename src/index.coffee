@@ -128,8 +128,6 @@ module.provider 'rest', ->
           callRefreshFns()
     , (err) ->
       false
-    waitForAuth: (val) ->
-      waitForAuth = val
     endpoints: endpoints
     autoId: autoId
     needsRefresh: (val) ->

@@ -199,9 +199,6 @@
           return false;
         });
         return {
-          waitForAuth: function(val) {
-            return waitForAuth = val;
-          },
           endpoints: endpoints,
           autoId: autoId,
           needsRefresh: function(val) {
