@@ -221,7 +221,6 @@
         });
       },
       search: function(endpoint, args, obj, cb) {
-        console.trace();
         args = args || {};
         return $http.post(endpoint.route || ("/api/" + endpoint + "/search"), endpoint.route && args && args.where ? args.where : args).then(function(response) {
           var clonedProps;
@@ -398,9 +397,6 @@
       };
       obj.refreshFn = RefreshFn(endpoint, args);
       rest.register(obj.refreshFn);
-      if (rest.endpoints || (endpoint.route && !endpoint.endpoints)) {
-        rest.search(endpoint, args, obj, cb);
-      }
       dereg = this.$watch(function() {
         return JSON.stringify(args);
       }, function(n, o) {
@@ -506,9 +502,6 @@
         obj.refreshFn(obj.endpoint);
       } else {
         rest.needsRefresh(true);
-      }
-      if (endpoint.route && !endpoint.endpoints) {
-        rest.single(endpoint, id, obj, cb);
       }
       this.$on('$destroy', obj.destroy);
       return obj;

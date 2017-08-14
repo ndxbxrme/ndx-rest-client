@@ -147,7 +147,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     , (err) ->
       false
   search: (endpoint, args, obj, cb) ->
-    console.trace()
     args = args or {}
     $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
     .then (response) ->
@@ -274,8 +273,8 @@ module.factory 'rest', ($http, $injector, $timeout) ->
               throttledSearch endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn
-    if rest.endpoints or (endpoint.route and not endpoint.endpoints)
-      rest.search endpoint, args, obj, cb
+    #if rest.endpoints or (endpoint.route and not endpoint.endpoints)
+    #  rest.search endpoint, args, obj, cb
     dereg = @.$watch ->
       JSON.stringify args
     , (n, o) ->
@@ -346,7 +345,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       obj.refreshFn obj.endpoint
     else
       rest.needsRefresh true
-    if endpoint.route and not endpoint.endpoints
-      rest.single endpoint, id, obj, cb
+    #if endpoint.route and not endpoint.endpoints
+    #  rest.single endpoint, id, obj, cb
     @.$on '$destroy', obj.destroy
     obj
