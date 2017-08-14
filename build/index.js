@@ -29,7 +29,6 @@
     };
     callRefreshFns = function() {
       var fn, i, key, len, results;
-      console.trace();
       if (okToLoad && endpoints) {
         results = [];
         for (key in endpoints) {
@@ -243,6 +242,7 @@
         });
       },
       list: function(endpoint, obj, cb) {
+        console.trace();
         return $http.post(endpoint.route || ("/api/" + endpoint)).then(function(response) {
           var clonedProps;
           clonedProps = null;

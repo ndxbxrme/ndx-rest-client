@@ -19,7 +19,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     pageSize: true
     error: true
   callRefreshFns = ->
-    console.trace()
     if okToLoad and endpoints
       for key of endpoints
         if endpoints[key].needsRefresh
@@ -165,6 +164,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       obj.error = err
       cb? obj
   list: (endpoint, obj, cb) ->
+    console.trace()
     $http.post (endpoint.route or "/api/#{endpoint}")
     .then (response) ->
       clonedProps = null
