@@ -147,6 +147,7 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     , (err) ->
       false
   search: (endpoint, args, obj, cb) ->
+    console.trace()
     args = args or {}
     $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
     .then (response) ->
@@ -164,7 +165,6 @@ module.factory 'rest', ($http, $injector, $timeout) ->
       obj.error = err
       cb? obj
   list: (endpoint, obj, cb) ->
-    console.trace()
     $http.post (endpoint.route or "/api/#{endpoint}")
     .then (response) ->
       clonedProps = null

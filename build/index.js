@@ -221,6 +221,7 @@
         });
       },
       search: function(endpoint, args, obj, cb) {
+        console.trace();
         args = args || {};
         return $http.post(endpoint.route || ("/api/" + endpoint + "/search"), endpoint.route && args && args.where ? args.where : args).then(function(response) {
           var clonedProps;
@@ -242,7 +243,6 @@
         });
       },
       list: function(endpoint, obj, cb) {
-        console.trace();
         return $http.post(endpoint.route || ("/api/" + endpoint)).then(function(response) {
           var clonedProps;
           clonedProps = null;
