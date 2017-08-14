@@ -135,6 +135,7 @@
         if ($injector.has('ndxCheck')) {
           ndxCheck = $injector.get('ndxCheck');
         }
+        console.log('wait for auth', waitForAuth);
         if ($injector.has('Auth' && waitForAuth)) {
           okToLoad = false;
           auth = $injector.get('Auth');
