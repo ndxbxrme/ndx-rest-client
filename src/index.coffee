@@ -87,13 +87,13 @@ module.factory 'rest', ($http, $injector, $timeout) ->
     dereg = root.$watch ->
       auth.getUser()
     , (n) ->
-      #if n
-      okToLoad = true
-      for endpoint of endpoints
-        endpoints[endpoint].needsRefresh = true
-      if needsRefresh
-        callRefreshFns()
-      dereg()
+      if n
+        okToLoad = true
+        for endpoint of endpoints
+          endpoints[endpoint].needsRefresh = true
+        if needsRefresh
+          callRefreshFns()
+        dereg()
   if $injector.has 'socket'
     socket = $injector.get 'socket'
     socket.on 'connect', ->
