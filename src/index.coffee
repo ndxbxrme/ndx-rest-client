@@ -203,7 +203,7 @@ module.provider 'rest', ->
     dereg: (fn) ->
       refreshFns.splice refreshFns.indexOf(fn), 1
     destroy: destroy
-.run ($rootScope, $http, rest) ->
+.run ($rootScope, $http, $timeout, rest) ->
   #borrowed from underscore.js
   throttle = (func, wait, options) ->
     context = undefined
@@ -229,14 +229,14 @@ module.provider 'rest', ->
       args = arguments
       if remaining <= 0 or remaining > wait
         if timeout
-          clearTimeout timeout
+          $timeout.clear timeout
           timeout = null
         previous = now
         result = func.apply(context, args)
         if !timeout
           context = args = null
       else if !timeout and options.trailing != false
-        timeout = setTimeout(later, remaining)
+        timeout = $timeout(later, remaining)
       result
       
   root = Object.getPrototypeOf $rootScope

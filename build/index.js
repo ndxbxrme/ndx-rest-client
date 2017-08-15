@@ -300,7 +300,7 @@
         };
       }
     };
-  }).run(function($rootScope, $http, rest) {
+  }).run(function($rootScope, $http, $timeout, rest) {
     var root, throttle;
     throttle = function(func, wait, options) {
       var args, context, later, previous, result, timeout;
@@ -331,7 +331,7 @@
         args = arguments;
         if (remaining <= 0 || remaining > wait) {
           if (timeout) {
-            clearTimeout(timeout);
+            $timeout.clear(timeout);
             timeout = null;
           }
           previous = now;
@@ -340,7 +340,7 @@
             context = args = null;
           }
         } else if (!timeout && options.trailing !== false) {
-          timeout = setTimeout(later, remaining);
+          timeout = $timeout(later, remaining);
         }
         return result;
       };
