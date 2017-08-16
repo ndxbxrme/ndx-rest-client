@@ -430,6 +430,9 @@
         dereg();
         return obj.destroy();
       });
+      if (!args) {
+        obj.refreshFn(obj.endpoint);
+      }
       return obj;
     };
     return root.single = function(endpoint, id, cb) {

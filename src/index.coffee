@@ -298,6 +298,8 @@ module.provider 'rest', ->
     @.$on '$destroy', ->
       dereg()
       obj.destroy()
+    if not args
+      obj.refreshFn obj.endpoint
     obj
   root.single = (endpoint, id, cb) ->
     obj = 
