@@ -346,13 +346,13 @@
       };
     };
     root = Object.getPrototypeOf($rootScope);
-    root.list = function(endpoint, args, cb) {
+    root.list = function(endpoint, args, cb, locked) {
       var RefreshFn, dereg, obj, throttledSearch;
       obj = {
         items: null,
         refreshFn: null,
         endpoint: endpoint,
-        locked: false,
+        locked: locked,
         save: function(item, checkFn) {
           if (checkFn) {
             return checkFn('save', endpoint, item, function() {
@@ -435,13 +435,13 @@
       }
       return obj;
     };
-    return root.single = function(endpoint, id, cb) {
+    return root.single = function(endpoint, id, cb, locked) {
       var RefreshFn, obj, throttledSingle;
       obj = {
         item: null,
         refreshFn: null,
         endpoint: endpoint,
-        locked: false,
+        locked: locked,
         save: function(checkFn) {
           if (checkFn) {
             return checkFn('save', endpoint, this.item, (function(_this) {

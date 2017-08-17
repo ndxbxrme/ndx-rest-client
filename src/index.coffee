@@ -240,12 +240,12 @@ module.provider 'rest', ->
       result
       
   root = Object.getPrototypeOf $rootScope
-  root.list = (endpoint, args, cb) ->
+  root.list = (endpoint, args, cb, locked) ->
     obj =
       items: null
       refreshFn: null
       endpoint: endpoint
-      locked: false
+      locked: locked
       save: (item, checkFn) ->
         if checkFn
           checkFn 'save', endpoint, item, ->
@@ -301,12 +301,12 @@ module.provider 'rest', ->
     if not args
       obj.refreshFn obj.endpoint
     obj
-  root.single = (endpoint, id, cb) ->
+  root.single = (endpoint, id, cb, locked) ->
     obj = 
       item: null
       refreshFn: null
       endpoint: endpoint
-      locked: false
+      locked: locked
       save: (checkFn) ->
         if checkFn
           checkFn 'save', endpoint, @.item, =>
