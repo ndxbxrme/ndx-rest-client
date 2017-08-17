@@ -1,6 +1,6 @@
 {
   "name": "ndx-rest-client",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "rest client for ndx-framework apps",
   "main": "build/index.js",
   "scripts": {
