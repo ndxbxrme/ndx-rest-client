@@ -134,20 +134,22 @@ module.provider 'rest', ->
       needsRefresh = val
     okToLoad: ->
       okToLoad
-    save: (endpoint, obj) ->
+    save: (endpoint, obj, cb) ->
       $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
       .then (response) =>
         endpoints[endpoint].needsRefresh = true
         ndxCheck and ndxCheck.setPristine()
         callRefreshFns endpoint
+        response and response.data and cb?(response.data)
       , (err) ->
         false
-    'delete': (endpoint, obj) ->
+    'delete': (endpoint, obj, cb) ->
       $http.delete (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}")
       .then (response) =>
         endpoints[endpoint].needsRefresh = true
         ndxCheck and ndxCheck.setPristine()
         callRefreshFns endpoint
+        response and response.data and cb?(response.data)
       , (err) ->
         false
     search: (endpoint, args, obj, cb) ->
@@ -229,7 +231,7 @@ module.provider 'rest', ->
       args = arguments
       if remaining <= 0 or remaining > wait
         if timeout
-          $timeout.clear timeout
+          $timeout.cancel timeout
           timeout = null
         previous = now
         result = func.apply(context, args)
@@ -240,7 +242,7 @@ module.provider 'rest', ->
       result
       
   root = Object.getPrototypeOf $rootScope
-  root.list = (endpoint, args, cb, locked) ->
+  root.list = (endpoint, args, cb, saveCb, locked) ->
     obj =
       items: null
       refreshFn: null
@@ -249,9 +251,9 @@ module.provider 'rest', ->
       save: (item, checkFn) ->
         if checkFn
           checkFn 'save', endpoint, item, ->
-            rest.save endpoint, item
+            rest.save endpoint, item, saveCb
         else
-          rest.save endpoint, item
+          rest.save endpoint, item, saveCb
       delete: (item, checkFn) ->
         if checkFn
           checkFn 'delete', endpoint, item, ->
@@ -276,9 +278,9 @@ module.provider 'rest', ->
             if table is endpoint or not table
               throttledSearch endpoint, args, obj, cb
     obj.refreshFn = RefreshFn endpoint, args
-    rest.register obj.refreshFn
-    #if rest.endpoints or (endpoint.route and not endpoint.endpoints)
-    #  rest.search endpoint, args, obj, cb
+    rest.register obj.refreshFn 
+    if endpoint.route and not endpoint.endpoints
+      rest.search endpoint, args, obj, cb
     dereg = @.$watch ->
       JSON.stringify args
     , (n, o) ->
@@ -301,7 +303,7 @@ module.provider 'rest', ->
     if not args
       obj.refreshFn obj.endpoint
     obj
-  root.single = (endpoint, id, cb, locked) ->
+  root.single = (endpoint, id, cb, saveCb, locked) ->
     obj = 
       item: null
       refreshFn: null
@@ -310,9 +312,9 @@ module.provider 'rest', ->
       save: (checkFn) ->
         if checkFn
           checkFn 'save', endpoint, @.item, =>
-            rest.save endpoint, @.item
+            rest.save endpoint, @.item, saveCb
         else
-          rest.save endpoint, @.item
+          rest.save endpoint, @.item, saveCb
       delete: (checkFn) ->
         if checkFn
           checkFn 'delete', endpoint, @.item, =>
@@ -351,7 +353,7 @@ module.provider 'rest', ->
       obj.refreshFn obj.endpoint
     else
       rest.needsRefresh true
-    #if endpoint.route and not endpoint.endpoints
-    #  rest.single endpoint, id, obj, cb
+    if endpoint.route and not endpoint.endpoints
+      rest.single endpoint, id, obj, cb
     @.$on '$destroy', obj.destroy
     obj

@@ -207,23 +207,25 @@
           okToLoad: function() {
             return okToLoad;
           },
-          save: function(endpoint, obj) {
+          save: function(endpoint, obj, cb) {
             return $http.post((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || '')), obj).then((function(_this) {
               return function(response) {
                 endpoints[endpoint].needsRefresh = true;
                 ndxCheck && ndxCheck.setPristine();
-                return callRefreshFns(endpoint);
+                callRefreshFns(endpoint);
+                return response && response.data && (typeof cb === "function" ? cb(response.data) : void 0);
               };
             })(this), function(err) {
               return false;
             });
           },
-          'delete': function(endpoint, obj) {
+          'delete': function(endpoint, obj, cb) {
             return $http["delete"]((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || ''))).then((function(_this) {
               return function(response) {
                 endpoints[endpoint].needsRefresh = true;
                 ndxCheck && ndxCheck.setPristine();
-                return callRefreshFns(endpoint);
+                callRefreshFns(endpoint);
+                return response && response.data && (typeof cb === "function" ? cb(response.data) : void 0);
               };
             })(this), function(err) {
               return false;
@@ -331,7 +333,7 @@
         args = arguments;
         if (remaining <= 0 || remaining > wait) {
           if (timeout) {
-            $timeout.clear(timeout);
+            $timeout.cancel(timeout);
             timeout = null;
           }
           previous = now;
@@ -346,7 +348,7 @@
       };
     };
     root = Object.getPrototypeOf($rootScope);
-    root.list = function(endpoint, args, cb, locked) {
+    root.list = function(endpoint, args, cb, saveCb, locked) {
       var RefreshFn, dereg, obj, throttledSearch;
       obj = {
         items: null,
@@ -356,10 +358,10 @@
         save: function(item, checkFn) {
           if (checkFn) {
             return checkFn('save', endpoint, item, function() {
-              return rest.save(endpoint, item);
+              return rest.save(endpoint, item, saveCb);
             });
           } else {
-            return rest.save(endpoint, item);
+            return rest.save(endpoint, item, saveCb);
           }
         },
         "delete": function(item, checkFn) {
@@ -408,6 +410,9 @@
       };
       obj.refreshFn = RefreshFn(endpoint, args);
       rest.register(obj.refreshFn);
+      if (endpoint.route && !endpoint.endpoints) {
+        rest.search(endpoint, args, obj, cb);
+      }
       dereg = this.$watch(function() {
         return JSON.stringify(args);
       }, function(n, o) {
@@ -435,7 +440,7 @@
       }
       return obj;
     };
-    return root.single = function(endpoint, id, cb, locked) {
+    return root.single = function(endpoint, id, cb, saveCb, locked) {
       var RefreshFn, obj, throttledSingle;
       obj = {
         item: null,
@@ -446,11 +451,11 @@
           if (checkFn) {
             return checkFn('save', endpoint, this.item, (function(_this) {
               return function() {
-                return rest.save(endpoint, _this.item);
+                return rest.save(endpoint, _this.item, saveCb);
               };
             })(this));
           } else {
-            return rest.save(endpoint, this.item);
+            return rest.save(endpoint, this.item, saveCb);
           }
         },
         "delete": function(checkFn) {
@@ -516,6 +521,9 @@
         obj.refreshFn(obj.endpoint);
       } else {
         rest.needsRefresh(true);
+      }
+      if (endpoint.route && !endpoint.endpoints) {
+        rest.single(endpoint, id, obj, cb);
       }
       this.$on('$destroy', obj.destroy);
       return obj;
