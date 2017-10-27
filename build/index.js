@@ -350,8 +350,13 @@
     root = Object.getPrototypeOf($rootScope);
     root.list = function(endpoint, args, cb, saveCb, locked) {
       var RefreshFn, dereg, obj, throttledSearch;
+      if (args) {
+        cb = args.onData || cb;
+        saveCb = args.onSave || saveCb;
+      }
       obj = {
         items: null,
+        args: args,
         refreshFn: null,
         endpoint: endpoint,
         locked: locked,
@@ -374,6 +379,9 @@
           }
         },
         destroy: function() {
+          if (typeof dereg === "function") {
+            dereg();
+          }
           return rest.dereg(obj.refreshFn);
         }
       };
@@ -432,7 +440,6 @@
         }
       }, true);
       this.$on('$destroy', function() {
-        dereg();
         return obj.destroy();
       });
       if (!args) {

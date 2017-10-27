@@ -243,8 +243,12 @@ module.provider 'rest', ->
       
   root = Object.getPrototypeOf $rootScope
   root.list = (endpoint, args, cb, saveCb, locked) ->
+    if args
+      cb = args.onData or cb
+      saveCb = args.onSave or saveCb
     obj =
       items: null
+      args: args
       refreshFn: null
       endpoint: endpoint
       locked: locked
@@ -261,6 +265,7 @@ module.provider 'rest', ->
         else
           rest.delete endpoint, item
       destroy: ->
+        dereg?()
         rest.dereg obj.refreshFn
     throttledSearch = throttle rest.search, 1000
     RefreshFn = (endpoint, args) ->
@@ -298,7 +303,6 @@ module.provider 'rest', ->
         rest.needsRefresh true
     , true
     @.$on '$destroy', ->
-      dereg()
       obj.destroy()
     if not args
       obj.refreshFn obj.endpoint
