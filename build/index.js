@@ -12,9 +12,20 @@
   }
 
   module.provider('rest', function() {
-    var waitForAuth;
+    var bustCache, cacheBuster, waitForAuth;
     waitForAuth = false;
+    bustCache = false;
+    cacheBuster = function() {
+      if (bustCache) {
+        return "?" + (Math.floor(Math.random() * 9999999999999));
+      } else {
+        return '';
+      }
+    };
     return {
+      bustCache: function(val) {
+        return bustCache = val;
+      },
       waitForAuth: function(val) {
         return waitForAuth = val;
       },
@@ -233,7 +244,7 @@
           },
           search: function(endpoint, args, obj, cb) {
             args = args || {};
-            return $http.post(endpoint.route || ("/api/" + endpoint + "/search"), endpoint.route && args && args.where ? args.where : args).then(function(response) {
+            return $http.post(endpoint.route || ("/api/" + endpoint + "/search" + (cacheBuster())), endpoint.route && args && args.where ? args.where : args).then(function(response) {
               var clonedProps;
               clonedProps = null;
               if (obj.items && obj.items.length) {
@@ -253,7 +264,7 @@
             });
           },
           list: function(endpoint, obj, cb) {
-            return $http.post(endpoint.route || ("/api/" + endpoint)).then(function(response) {
+            return $http.post(endpoint.route || ("/api/" + endpoint + (cacheBuster()))).then(function(response) {
               var clonedProps;
               clonedProps = null;
               if (obj.items && obj.items.length) {
@@ -276,7 +287,7 @@
             if (Object.prototype.toString.call(id) === '[object Object]') {
               id = escape(JSON.stringify(id));
             }
-            return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id)).then(function(response) {
+            return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (cacheBuster()))).then(function(response) {
               var clonedProps;
               clonedProps = null;
               if (obj.item) {

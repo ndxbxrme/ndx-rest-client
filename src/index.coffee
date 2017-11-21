@@ -6,6 +6,11 @@ catch e
   module =angular.module 'ndx', []
 module.provider 'rest', ->
   waitForAuth = false
+  bustCache = false
+  cacheBuster = ->
+    if bustCache then "?#{Math.floor(Math.random() * 9999999999999)}" else ''
+  bustCache: (val) ->
+    bustCache = val
   waitForAuth: (val) ->
     waitForAuth = val
   $get: ($http, $injector, $timeout) ->
@@ -154,7 +159,7 @@ module.provider 'rest', ->
         false
     search: (endpoint, args, obj, cb) ->
       args = args or {}
-      $http.post (endpoint.route or "/api/#{endpoint}/search"), if endpoint.route and args and args.where then args.where else args
+      $http.post (endpoint.route or "/api/#{endpoint}/search#{cacheBuster()}"), if endpoint.route and args and args.where then args.where else args
       .then (response) ->
         clonedProps = null
         if obj.items and obj.items.length
@@ -170,7 +175,7 @@ module.provider 'rest', ->
         obj.error = err
         cb? obj
     list: (endpoint, obj, cb) ->
-      $http.post (endpoint.route or "/api/#{endpoint}")
+      $http.post (endpoint.route or "/api/#{endpoint}#{cacheBuster()}")
       .then (response) ->
         clonedProps = null
         if obj.items and obj.items.length
@@ -188,7 +193,7 @@ module.provider 'rest', ->
     single: (endpoint, id, obj, cb) ->
       if Object.prototype.toString.call(id) is '[object Object]'
         id = escape JSON.stringify id
-      $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}"
+      $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{cacheBuster()}"
       .then (response) ->
         clonedProps = null
         if obj.item
