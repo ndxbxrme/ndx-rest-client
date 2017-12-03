@@ -360,7 +360,8 @@
     };
     root = Object.getPrototypeOf($rootScope);
     root.list = function(endpoint, args, cb, saveCb, locked) {
-      var RefreshFn, dereg, obj, throttledSearch;
+      var RefreshFn, dereg, ignoreNextWatch, obj, throttledSearch;
+      ignoreNextWatch = false;
       if (args) {
         cb = args.onData || cb;
         saveCb = args.onSave || saveCb;
@@ -400,6 +401,10 @@
       RefreshFn = function(endpoint, args) {
         return function(table) {
           var ep, i, len, ref, results;
+          if (args.preRefresh) {
+            args.preRefresh(args);
+            ignoreNextWatch = true;
+          }
           if (!obj.locked) {
             if (obj.items) {
               rest.destroy(obj.items);
@@ -435,19 +440,23 @@
       dereg = this.$watch(function() {
         return JSON.stringify(args);
       }, function(n, o) {
-        if (n && rest.okToLoad()) {
+        if (!ignoreNextWatch) {
+          if (n && rest.okToLoad()) {
 
-          /*
-          if endpoint.route
-            if endpoint.endpoints and endpoint.endpoints.length
-              for ep in endpoint.endpoints
-                rest.endpoints[ep].needsRefresh = true
-          else
-            rest.endpoints[endpoint].needsRefresh = true
-           */
-          return obj.refreshFn(obj.endpoint);
+            /*
+            if endpoint.route
+              if endpoint.endpoints and endpoint.endpoints.length
+                for ep in endpoint.endpoints
+                  rest.endpoints[ep].needsRefresh = true
+            else
+              rest.endpoints[endpoint].needsRefresh = true
+             */
+            return obj.refreshFn(obj.endpoint);
+          } else {
+            return rest.needsRefresh(true);
+          }
         } else {
-          return rest.needsRefresh(true);
+          return ignoreNextWatch = false;
         }
       }, true);
       this.$on('$destroy', function() {

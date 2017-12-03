@@ -248,6 +248,7 @@ module.provider 'rest', ->
       
   root = Object.getPrototypeOf $rootScope
   root.list = (endpoint, args, cb, saveCb, locked) ->
+    ignoreNextWatch = false
     if args
       cb = args.onData or cb
       saveCb = args.onSave or saveCb
@@ -275,6 +276,9 @@ module.provider 'rest', ->
     throttledSearch = throttle rest.search, 1000
     RefreshFn = (endpoint, args) ->
       (table) ->
+        if args.preRefresh
+          args.preRefresh args
+          ignoreNextWatch = true
         if not obj.locked
           if obj.items
             rest.destroy obj.items
@@ -294,18 +298,21 @@ module.provider 'rest', ->
     dereg = @.$watch ->
       JSON.stringify args
     , (n, o) ->
-      if n and rest.okToLoad()
-        ###
-        if endpoint.route
-          if endpoint.endpoints and endpoint.endpoints.length
-            for ep in endpoint.endpoints
-              rest.endpoints[ep].needsRefresh = true
+      if not ignoreNextWatch
+        if n and rest.okToLoad()
+          ###
+          if endpoint.route
+            if endpoint.endpoints and endpoint.endpoints.length
+              for ep in endpoint.endpoints
+                rest.endpoints[ep].needsRefresh = true
+          else
+            rest.endpoints[endpoint].needsRefresh = true
+          ###
+          obj.refreshFn obj.endpoint
         else
-          rest.endpoints[endpoint].needsRefresh = true
-        ###
-        obj.refreshFn obj.endpoint
+          rest.needsRefresh true
       else
-        rest.needsRefresh true
+        ignoreNextWatch = false
     , true
     @.$on '$destroy', ->
       obj.destroy()
