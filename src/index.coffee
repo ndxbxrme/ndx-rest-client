@@ -276,7 +276,7 @@ module.provider 'rest', ->
     throttledSearch = throttle rest.search, 1000
     RefreshFn = (endpoint, args) ->
       (table) ->
-        if args.preRefresh
+        if args?.preRefresh
           args.preRefresh args
           ignoreNextWatch = true
         if not obj.locked

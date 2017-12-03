@@ -401,7 +401,7 @@
       RefreshFn = function(endpoint, args) {
         return function(table) {
           var ep, i, len, ref, results;
-          if (args.preRefresh) {
+          if (args != null ? args.preRefresh : void 0) {
             args.preRefresh(args);
             ignoreNextWatch = true;
           }
