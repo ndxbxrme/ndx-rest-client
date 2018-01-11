@@ -105,18 +105,22 @@
           output = null;
           type = Object.prototype.toString.call(obj);
           if (type === '[object Array]') {
-            output = [];
+            output = output || [];
             for (i = 0, len = obj.length; i < len; i++) {
               item = obj[i];
-              clonedItem = cloneSpecialProps(item);
-              clonedItem[autoId] = item[autoId];
-              output.push(clonedItem);
+              if (item[autoId]) {
+                clonedItem = cloneSpecialProps(item);
+                clonedItem[autoId] = item[autoId];
+                output.push(clonedItem);
+              }
             }
           } else if (type === '[object Object]') {
-            output = {};
+            output = output || {};
             for (key in obj) {
               if (key.indexOf('$') === 0) {
                 output[key] = obj[key];
+              } else if (Object.prototype.toString.call(obj[key]) === '[object Array]') {
+                output[key] = cloneSpecialProps(obj[key]);
               }
             }
           }
@@ -138,8 +142,12 @@
             }
           } else if (type === '[object Object]') {
             for (key in clonedProps) {
-              obj[key] = clonedProps[key];
-              restore(obj[key]);
+              if (key.indexOf('$') === 0 && key !== '$$hashKey') {
+                obj[key] = clonedProps[key];
+                restore(obj[key]);
+              } else {
+                restoreSpecialProps(obj[key], clonedProps[key]);
+              }
             }
           }
         };

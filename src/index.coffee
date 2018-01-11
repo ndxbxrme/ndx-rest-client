@@ -61,16 +61,19 @@ module.provider 'rest', ->
       output = null
       type = Object.prototype.toString.call obj
       if type is '[object Array]'
-        output = []
+        output = output or []
         for item in obj
-          clonedItem = cloneSpecialProps item
-          clonedItem[autoId] = item[autoId]
-          output.push clonedItem
+          if item[autoId]
+            clonedItem = cloneSpecialProps item
+            clonedItem[autoId] = item[autoId]
+            output.push clonedItem
       else if type is '[object Object]'
-        output = {}
+        output = output or {}
         for key of obj
           if key.indexOf('$') is 0
             output[key] = obj[key]
+          else if Object.prototype.toString.call(obj[key]) is '[object Array]'
+            output[key] = cloneSpecialProps obj[key]
       output
 
     restoreSpecialProps = (obj, clonedProps) ->
@@ -83,8 +86,11 @@ module.provider 'rest', ->
               break
       else if type is '[object Object]'
         for key of clonedProps
-          obj[key] = clonedProps[key]
-          restore obj[key]
+          if key.indexOf('$') is 0 and key isnt '$$hashKey'
+            obj[key] = clonedProps[key]
+            restore obj[key]
+          else
+            restoreSpecialProps obj[key], clonedProps[key]
       return
 
     if $injector.has 'ndxCheck'
