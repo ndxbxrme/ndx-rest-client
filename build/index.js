@@ -295,7 +295,7 @@
             if (Object.prototype.toString.call(id) === '[object Object]') {
               id = escape(JSON.stringify(id));
             }
-            return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (cacheBuster()))).then(function(response) {
+            return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (obj.all ? '/all' : '') + (cacheBuster()))).then(function(response) {
               var clonedProps;
               clonedProps = null;
               if (obj.item) {
@@ -475,9 +475,10 @@
       }
       return obj;
     };
-    return root.single = function(endpoint, id, cb, saveCb, locked) {
+    return root.single = function(endpoint, id, cb, saveCb, locked, all) {
       var RefreshFn, obj, throttledSingle;
       obj = {
+        all: all,
         item: null,
         refreshFn: null,
         endpoint: endpoint,

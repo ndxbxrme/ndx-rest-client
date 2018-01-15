@@ -199,7 +199,7 @@ module.provider 'rest', ->
     single: (endpoint, id, obj, cb) ->
       if Object.prototype.toString.call(id) is '[object Object]'
         id = escape JSON.stringify id
-      $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{cacheBuster()}"
+      $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
       .then (response) ->
         clonedProps = null
         if obj.item
@@ -325,8 +325,9 @@ module.provider 'rest', ->
     if not args
       obj.refreshFn obj.endpoint
     obj
-  root.single = (endpoint, id, cb, saveCb, locked) ->
+  root.single = (endpoint, id, cb, saveCb, locked, all) ->
     obj = 
+      all: all
       item: null
       refreshFn: null
       endpoint: endpoint
