@@ -146,6 +146,7 @@ module.provider 'rest', ->
     okToLoad: ->
       okToLoad
     save: (endpoint, obj, cb) ->
+      console.log 'saving', console.trace()
       $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
       .then (response) =>
         endpoints[endpoint].needsRefresh = true
@@ -197,6 +198,7 @@ module.provider 'rest', ->
         obj.error = err
         cb? obj
     single: (endpoint, id, obj, cb) ->
+      console.log 'making single', endpoint
       if Object.prototype.toString.call(id) is '[object Object]'
         id = escape JSON.stringify id
       $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
