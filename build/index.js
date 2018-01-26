@@ -227,7 +227,6 @@
             return okToLoad;
           },
           save: function(endpoint, obj, cb) {
-            console.log('saving', console.trace());
             return $http.post((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || '')), obj).then((function(_this) {
               return function(response) {
                 endpoints[endpoint].needsRefresh = true;
@@ -293,7 +292,6 @@
             });
           },
           single: function(endpoint, id, obj, cb) {
-            console.log('making single', endpoint);
             if (Object.prototype.toString.call(id) === '[object Object]') {
               id = escape(JSON.stringify(id));
             }
