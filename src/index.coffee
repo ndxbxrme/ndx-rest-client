@@ -9,10 +9,17 @@ module.provider 'rest', ->
   bustCache = false
   cacheBuster = ->
     if bustCache then "?#{Math.floor(Math.random() * 9999999999999)}" else ''
+  callbacks =
+    endpoints: []
   bustCache: (val) ->
     bustCache = val
   waitForAuth: (val) ->
     waitForAuth = val
+  syncCallback = (name, obj, cb) ->
+    if callbacks[name] and callbacks[name].length
+      for callback in callbacks[name]
+        callback obj
+    cb?()
   $get: ($http, $injector, $timeout) ->
     okToLoad = true
     endpoints = {}
@@ -95,20 +102,15 @@ module.provider 'rest', ->
 
     if $injector.has 'ndxCheck'
       ndxCheck = $injector.get 'ndxCheck'
-    if $injector.has('Auth') and waitForAuth
+    if $injector.has('Auth')
       okToLoad = false
       auth = $injector.get 'Auth'
-      root = $injector.get '$rootScope'
-      dereg = root.$watch ->
-        auth.getUser()
-      , (n) ->
-        if n
+      auth.onUser ->
+        $timeout ->
           okToLoad = true
           for endpoint of endpoints
             endpoints[endpoint].needsRefresh = true
-          if needsRefresh
-            callRefreshFns()
-          dereg()
+          callRefreshFns()
     if $injector.has 'socket'
       socket = $injector.get 'socket'
       socket.on 'connect', ->
@@ -124,21 +126,27 @@ module.provider 'rest', ->
         endpoints[data.table].needsRefresh = true
         endpoints[data.table].ids.push data.id
         callRefreshFns()
-    $http.get '/rest/endpoints'
-    .then (response) ->
-      if response.data and response.data.endpoints and response.data.endpoints.length
-        for endpoint in response.data.endpoints
-          endpoints[endpoint] = 
-            needsRefresh: true
-            lastRefresh: 0
-            nextRefresh: 0
-            ids: []
-        if response.data.autoId
-          autoId = response.data.autoId
-        if needsRefresh
-          callRefreshFns()
-    , (err) ->
-      false
+    $timeout ->
+      $http.get '/rest/endpoints'
+      .then (response) ->
+        if response.data and response.data.endpoints and response.data.endpoints.length
+          for endpoint in response.data.endpoints
+            endpoints[endpoint] = 
+              needsRefresh: true
+              lastRefresh: 0
+              nextRefresh: 0
+              ids: []
+          if response.data.autoId
+            autoId = response.data.autoId
+          if needsRefresh
+            callRefreshFns()
+          syncCallback 'endpoints', response.data
+      , (err) ->
+        false
+    on: (name, callback) ->
+      callbacks[name].push callback
+    off: (name, callback) ->
+      callbacks[name].splice callbacks[name].indexOf(callback), 1
     endpoints: endpoints
     autoId: autoId
     needsRefresh: (val) ->
@@ -322,7 +330,7 @@ module.provider 'rest', ->
     , true
     @.$on '$destroy', ->
       obj.destroy()
-    if not args
+    if not args and rest.endpoints.endpoints
       obj.refreshFn obj.endpoint
     obj
   root.single = (endpoint, id, cb, saveCb, locked, all) ->
@@ -364,7 +372,7 @@ module.provider 'rest', ->
               throttledSingle endpoint, id, obj, cb
     obj.refreshFn = RefreshFn endpoint, id
     rest.register obj.refreshFn
-    if rest.okToLoad()
+    if rest.okToLoad() and rest.endpoints.endpoints
       ###
       if endpoint.route
         if endpoint.endpoints

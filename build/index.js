@@ -12,7 +12,7 @@
   }
 
   module.provider('rest', function() {
-    var bustCache, cacheBuster, waitForAuth;
+    var bustCache, cacheBuster, callbacks, syncCallback, waitForAuth;
     waitForAuth = false;
     bustCache = false;
     cacheBuster = function() {
@@ -22,15 +22,31 @@
         return '';
       }
     };
-    return {
+    callbacks = {
+      endpoints: []
+    };
+    ({
       bustCache: function(val) {
         return bustCache = val;
       },
       waitForAuth: function(val) {
         return waitForAuth = val;
-      },
+      }
+    });
+    syncCallback = function(name, obj, cb) {
+      var callback, i, len, ref;
+      if (callbacks[name] && callbacks[name].length) {
+        ref = callbacks[name];
+        for (i = 0, len = ref.length; i < len; i++) {
+          callback = ref[i];
+          callback(obj);
+        }
+      }
+      return typeof cb === "function" ? cb() : void 0;
+    };
+    return {
       $get: function($http, $injector, $timeout) {
-        var auth, autoId, callRefreshFns, cloneSpecialProps, dereg, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, root, socket, waiting;
+        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, waiting;
         okToLoad = true;
         endpoints = {};
         autoId = '_id';
@@ -154,24 +170,18 @@
         if ($injector.has('ndxCheck')) {
           ndxCheck = $injector.get('ndxCheck');
         }
-        if ($injector.has('Auth') && waitForAuth) {
+        if ($injector.has('Auth')) {
           okToLoad = false;
           auth = $injector.get('Auth');
-          root = $injector.get('$rootScope');
-          dereg = root.$watch(function() {
-            return auth.getUser();
-          }, function(n) {
-            var endpoint;
-            if (n) {
+          auth.onUser(function() {
+            return $timeout(function() {
+              var endpoint;
               okToLoad = true;
               for (endpoint in endpoints) {
                 endpoints[endpoint].needsRefresh = true;
               }
-              if (needsRefresh) {
-                callRefreshFns();
-              }
-              return dereg();
-            }
+              return callRefreshFns();
+            });
           });
         }
         if ($injector.has('socket')) {
@@ -194,30 +204,39 @@
             return callRefreshFns();
           });
         }
-        $http.get('/rest/endpoints').then(function(response) {
-          var endpoint, i, len, ref;
-          if (response.data && response.data.endpoints && response.data.endpoints.length) {
-            ref = response.data.endpoints;
-            for (i = 0, len = ref.length; i < len; i++) {
-              endpoint = ref[i];
-              endpoints[endpoint] = {
-                needsRefresh: true,
-                lastRefresh: 0,
-                nextRefresh: 0,
-                ids: []
-              };
+        $timeout(function() {
+          return $http.get('/rest/endpoints').then(function(response) {
+            var endpoint, i, len, ref;
+            if (response.data && response.data.endpoints && response.data.endpoints.length) {
+              ref = response.data.endpoints;
+              for (i = 0, len = ref.length; i < len; i++) {
+                endpoint = ref[i];
+                endpoints[endpoint] = {
+                  needsRefresh: true,
+                  lastRefresh: 0,
+                  nextRefresh: 0,
+                  ids: []
+                };
+              }
+              if (response.data.autoId) {
+                autoId = response.data.autoId;
+              }
+              if (needsRefresh) {
+                callRefreshFns();
+              }
+              return syncCallback('endpoints', response.data);
             }
-            if (response.data.autoId) {
-              autoId = response.data.autoId;
-            }
-            if (needsRefresh) {
-              return callRefreshFns();
-            }
-          }
-        }, function(err) {
-          return false;
+          }, function(err) {
+            return false;
+          });
         });
         return {
+          on: function(name, callback) {
+            return callbacks[name].push(callback);
+          },
+          off: function(name, callback) {
+            return callbacks[name].splice(callbacks[name].indexOf(callback), 1);
+          },
           endpoints: endpoints,
           autoId: autoId,
           needsRefresh: function(val) {
@@ -470,7 +489,7 @@
       this.$on('$destroy', function() {
         return obj.destroy();
       });
-      if (!args) {
+      if (!args && rest.endpoints.endpoints) {
         obj.refreshFn(obj.endpoint);
       }
       return obj;
@@ -544,7 +563,7 @@
       };
       obj.refreshFn = RefreshFn(endpoint, id);
       rest.register(obj.refreshFn);
-      if (rest.okToLoad()) {
+      if (rest.okToLoad() && rest.endpoints.endpoints) {
 
         /*
         if endpoint.route
