@@ -46,7 +46,7 @@
     };
     return {
       $get: function($http, $injector, $timeout) {
-        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, waiting;
+        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
         okToLoad = true;
         endpoints = {};
         autoId = '_id';
@@ -184,25 +184,35 @@
             });
           });
         }
+        socketRefresh = function(data) {
+          var id, key, type;
+          if (data) {
+            endpoints[data.table].needsRefresh = true;
+            type = Object.prototype.toString.call(data.id);
+            if (type === '[object Array]') {
+              for (id in data.id) {
+                endpoints[data.table].ids.push(id);
+              }
+            } else if (type === '[object String]') {
+              endpoints[data.table].ids.push(data.id);
+            }
+          } else {
+            for (key in endpoints) {
+              endpoints[key].needsRefresh = true;
+            }
+          }
+          return callRefreshFns();
+        };
         if ($injector.has('socket')) {
           socket = $injector.get('socket');
           socket.on('connect', function() {
             return socket.emit('rest', {});
           });
-          socket.on('update', function(data) {
-            endpoints[data.table].needsRefresh = true;
-            endpoints[data.table].ids.push(data.id);
-            return callRefreshFns();
-          });
-          socket.on('insert', function(data) {
-            endpoints[data.table].needsRefresh = true;
-            return callRefreshFns();
-          });
-          socket.on('delete', function(data) {
-            endpoints[data.table].needsRefresh = true;
-            endpoints[data.table].ids.push(data.id);
-            return callRefreshFns();
-          });
+          if (!$injector.has('Server')) {
+            socket.on('update', socketRefresh);
+            socket.on('insert', socketRefresh);
+            socket.on('delete', socketRefresh);
+          }
         }
         $timeout(function() {
           return $http.get('/rest/endpoints').then(function(response) {
@@ -239,6 +249,7 @@
           },
           endpoints: endpoints,
           autoId: autoId,
+          socketRefresh: socketRefresh,
           needsRefresh: function(val) {
             return needsRefresh = val;
           },

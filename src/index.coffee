@@ -111,21 +111,30 @@ module.provider 'rest', ->
           for endpoint of endpoints
             endpoints[endpoint].needsRefresh = true
           callRefreshFns()
+          
+          
+    socketRefresh = (data) ->
+      if data
+        endpoints[data.table].needsRefresh = true
+        type = Object.prototype.toString.call data.id
+        if type is '[object Array]'
+          for id of data.id
+            endpoints[data.table].ids.push id
+        else if type is '[object String]'
+          endpoints[data.table].ids.push data.id
+      else
+        for key of endpoints
+          endpoints[key].needsRefresh = true
+      callRefreshFns()
+      
     if $injector.has 'socket'
       socket = $injector.get 'socket'
       socket.on 'connect', ->
         socket.emit 'rest', {}
-      socket.on 'update', (data) ->
-        endpoints[data.table].needsRefresh = true
-        endpoints[data.table].ids.push data.id
-        callRefreshFns()
-      socket.on 'insert', (data) ->
-        endpoints[data.table].needsRefresh = true
-        callRefreshFns()
-      socket.on 'delete', (data) ->
-        endpoints[data.table].needsRefresh = true
-        endpoints[data.table].ids.push data.id
-        callRefreshFns()
+      if not $injector.has 'Server'
+        socket.on 'update', socketRefresh
+        socket.on 'insert', socketRefresh
+        socket.on 'delete', socketRefresh
     $timeout ->
       $http.get '/rest/endpoints'
       .then (response) ->
@@ -149,6 +158,7 @@ module.provider 'rest', ->
       callbacks[name].splice callbacks[name].indexOf(callback), 1
     endpoints: endpoints
     autoId: autoId
+    socketRefresh: socketRefresh
     needsRefresh: (val) ->
       needsRefresh = val
     okToLoad: ->
