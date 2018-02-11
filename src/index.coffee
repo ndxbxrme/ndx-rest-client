@@ -11,15 +11,15 @@ module.provider 'rest', ->
     if bustCache then "?#{Math.floor(Math.random() * 9999999999999)}" else ''
   callbacks =
     endpoints: []
-  bustCache: (val) ->
-    bustCache = val
-  waitForAuth: (val) ->
-    waitForAuth = val
   syncCallback = (name, obj, cb) ->
     if callbacks[name] and callbacks[name].length
       for callback in callbacks[name]
         callback obj
     cb?()
+  bustCache: (val) ->
+    bustCache = val
+  waitForAuth: (val) ->
+    waitForAuth = val
   $get: ($http, $injector, $timeout) ->
     okToLoad = true
     endpoints = {}

@@ -25,14 +25,6 @@
     callbacks = {
       endpoints: []
     };
-    ({
-      bustCache: function(val) {
-        return bustCache = val;
-      },
-      waitForAuth: function(val) {
-        return waitForAuth = val;
-      }
-    });
     syncCallback = function(name, obj, cb) {
       var callback, i, len, ref;
       if (callbacks[name] && callbacks[name].length) {
@@ -45,6 +37,12 @@
       return typeof cb === "function" ? cb() : void 0;
     };
     return {
+      bustCache: function(val) {
+        return bustCache = val;
+      },
+      waitForAuth: function(val) {
+        return waitForAuth = val;
+      },
       $get: function($http, $injector, $timeout) {
         var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
         okToLoad = true;
