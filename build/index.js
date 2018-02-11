@@ -588,9 +588,7 @@
       } else {
         rest.needsRefresh(true);
       }
-      if (endpoint.route && !endpoint.endpoints) {
-        rest.single(endpoint, id, obj, cb);
-      }
+      rest.single(endpoint, id, obj, cb);
       this.$on('$destroy', obj.destroy);
       return obj;
     };

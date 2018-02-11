@@ -394,7 +394,7 @@ module.provider 'rest', ->
       obj.refreshFn obj.endpoint
     else
       rest.needsRefresh true
-    if endpoint.route and not endpoint.endpoints
-      rest.single endpoint, id, obj, cb
+    #if endpoint.route and not endpoint.endpoints
+    rest.single endpoint, id, obj, cb
     @.$on '$destroy', obj.destroy
     obj
