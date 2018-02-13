@@ -161,6 +161,7 @@ module.provider 'rest', ->
     socketRefresh: socketRefresh
     needsRefresh: (val) ->
       needsRefresh = val
+    callRefreshFns: callRefreshFns
     okToLoad: ->
       okToLoad
     save: (endpoint, obj, cb) ->
@@ -323,7 +324,7 @@ module.provider 'rest', ->
       JSON.stringify args
     , (n, o) ->
       if not ignoreNextWatch
-        if n and rest.okToLoad()
+        if rest.okToLoad()
           ###
           if endpoint.route
             if endpoint.endpoints and endpoint.endpoints.length
@@ -342,6 +343,7 @@ module.provider 'rest', ->
       obj.destroy()
     if not args and rest.endpoints.endpoints
       obj.refreshFn obj.endpoint
+    rest.callRefreshFns()
     obj
   root.single = (endpoint, id, cb, saveCb, locked, all) ->
     obj = 

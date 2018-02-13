@@ -251,6 +251,7 @@
           needsRefresh: function(val) {
             return needsRefresh = val;
           },
+          callRefreshFns: callRefreshFns,
           okToLoad: function() {
             return okToLoad;
           },
@@ -477,7 +478,7 @@
         return JSON.stringify(args);
       }, function(n, o) {
         if (!ignoreNextWatch) {
-          if (n && rest.okToLoad()) {
+          if (rest.okToLoad()) {
 
             /*
             if endpoint.route
@@ -501,6 +502,7 @@
       if (!args && rest.endpoints.endpoints) {
         obj.refreshFn(obj.endpoint);
       }
+      rest.callRefreshFns();
       return obj;
     };
     return root.single = function(endpoint, id, cb, saveCb, locked, all) {
