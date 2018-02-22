@@ -28,6 +28,7 @@ module.provider 'rest', ->
     waiting = false
     ndxCheck = null
     needsRefresh = false
+    maintenanceMode = false
     listTransform =
       items: true
       total: true
@@ -147,6 +148,8 @@ module.provider 'rest', ->
               ids: []
           if response.data.autoId
             autoId = response.data.autoId
+          if response.data.server
+            maintenanceMode = response.data.server is 'maintenance'
           if needsRefresh
             callRefreshFns()
           syncCallback 'endpoints', response.data
@@ -158,6 +161,8 @@ module.provider 'rest', ->
       callbacks[name].splice callbacks[name].indexOf(callback), 1
     endpoints: endpoints
     autoId: autoId
+    maintenanceMode: ->
+      maintenanceMode
     socketRefresh: socketRefresh
     needsRefresh: (val) ->
       needsRefresh = val
@@ -343,7 +348,8 @@ module.provider 'rest', ->
       obj.destroy()
     if not args and rest.endpoints.endpoints
       obj.refreshFn obj.endpoint
-    rest.callRefreshFns()
+    if rest.okToLoad()
+      rest.callRefreshFns()
     obj
   root.single = (endpoint, id, cb, saveCb, locked, all) ->
     obj = 

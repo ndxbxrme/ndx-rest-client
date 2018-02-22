@@ -44,7 +44,7 @@
         return waitForAuth = val;
       },
       $get: function($http, $injector, $timeout) {
-        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
+        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
         okToLoad = true;
         endpoints = {};
         autoId = '_id';
@@ -52,6 +52,7 @@
         waiting = false;
         ndxCheck = null;
         needsRefresh = false;
+        maintenanceMode = false;
         listTransform = {
           items: true,
           total: true,
@@ -229,6 +230,9 @@
               if (response.data.autoId) {
                 autoId = response.data.autoId;
               }
+              if (response.data.server) {
+                maintenanceMode = response.data.server === 'maintenance';
+              }
               if (needsRefresh) {
                 callRefreshFns();
               }
@@ -247,6 +251,9 @@
           },
           endpoints: endpoints,
           autoId: autoId,
+          maintenanceMode: function() {
+            return maintenanceMode;
+          },
           socketRefresh: socketRefresh,
           needsRefresh: function(val) {
             return needsRefresh = val;
@@ -502,7 +509,9 @@
       if (!args && rest.endpoints.endpoints) {
         obj.refreshFn(obj.endpoint);
       }
-      rest.callRefreshFns();
+      if (rest.okToLoad()) {
+        rest.callRefreshFns();
+      }
       return obj;
     };
     return root.single = function(endpoint, id, cb, saveCb, locked, all) {
