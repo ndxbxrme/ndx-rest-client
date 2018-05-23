@@ -7,6 +7,7 @@ catch e
 module.provider 'rest', ->
   waitForAuth = false
   bustCache = false
+  lockAll = false
   cacheBuster = ->
     if bustCache then "?#{Math.floor(Math.random() * 9999999999999)}" else ''
   callbacks =
@@ -115,18 +116,19 @@ module.provider 'rest', ->
           
           
     socketRefresh = (data) ->
-      if data
-        endpoints[data.table].needsRefresh = true
-        type = Object.prototype.toString.call data.id
-        if type is '[object Array]'
-          for id of data.id
-            endpoints[data.table].ids.push id
-        else if type is '[object String]'
-          endpoints[data.table].ids.push data.id
-      else
-        for key of endpoints
-          endpoints[key].needsRefresh = true
-      callRefreshFns()
+      if not lockAll
+        if data
+          endpoints[data.table].needsRefresh = true
+          type = Object.prototype.toString.call data.id
+          if type is '[object Array]'
+            for id of data.id
+              endpoints[data.table].ids.push id
+          else if type is '[object String]'
+            endpoints[data.table].ids.push data.id
+        else
+          for key of endpoints
+            endpoints[key].needsRefresh = true
+        callRefreshFns()
       
     if $injector.has 'socket'
       socket = $injector.get 'socket'
@@ -155,6 +157,10 @@ module.provider 'rest', ->
           syncCallback 'endpoints', response.data
       , (err) ->
         false
+    lockAll: ->
+      lockAll = true
+    unlockAll: ->
+      lockAll = false
     on: (name, callback) ->
       callbacks[name].push callback
     off: (name, callback) ->

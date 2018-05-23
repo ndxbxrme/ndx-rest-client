@@ -12,9 +12,10 @@
   }
 
   module.provider('rest', function() {
-    var bustCache, cacheBuster, callbacks, syncCallback, waitForAuth;
+    var bustCache, cacheBuster, callbacks, lockAll, syncCallback, waitForAuth;
     waitForAuth = false;
     bustCache = false;
+    lockAll = false;
     cacheBuster = function() {
       if (bustCache) {
         return "?" + (Math.floor(Math.random() * 9999999999999));
@@ -185,22 +186,24 @@
         }
         socketRefresh = function(data) {
           var id, key, type;
-          if (data) {
-            endpoints[data.table].needsRefresh = true;
-            type = Object.prototype.toString.call(data.id);
-            if (type === '[object Array]') {
-              for (id in data.id) {
-                endpoints[data.table].ids.push(id);
+          if (!lockAll) {
+            if (data) {
+              endpoints[data.table].needsRefresh = true;
+              type = Object.prototype.toString.call(data.id);
+              if (type === '[object Array]') {
+                for (id in data.id) {
+                  endpoints[data.table].ids.push(id);
+                }
+              } else if (type === '[object String]') {
+                endpoints[data.table].ids.push(data.id);
               }
-            } else if (type === '[object String]') {
-              endpoints[data.table].ids.push(data.id);
+            } else {
+              for (key in endpoints) {
+                endpoints[key].needsRefresh = true;
+              }
             }
-          } else {
-            for (key in endpoints) {
-              endpoints[key].needsRefresh = true;
-            }
+            return callRefreshFns();
           }
-          return callRefreshFns();
         };
         if ($injector.has('socket')) {
           socket = $injector.get('socket');
@@ -243,6 +246,12 @@
           });
         });
         return {
+          lockAll: function() {
+            return lockAll = true;
+          },
+          unlockAll: function() {
+            return lockAll = false;
+          },
           on: function(name, callback) {
             return callbacks[name].push(callback);
           },
