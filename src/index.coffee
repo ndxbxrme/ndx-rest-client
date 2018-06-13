@@ -30,6 +30,7 @@ module.provider 'rest', ->
     ndxCheck = null
     needsRefresh = false
     maintenanceMode = false
+    loading = 0
     listTransform =
       items: true
       total: true
@@ -176,27 +177,35 @@ module.provider 'rest', ->
     okToLoad: ->
       okToLoad
     save: (endpoint, obj, cb) ->
+      loading++
       $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
       .then (response) =>
+        loading--
         endpoints[endpoint].needsRefresh = true
         ndxCheck and ndxCheck.setPristine()
         callRefreshFns endpoint
         response and response.data and cb?(response.data)
       , (err) ->
+        loading--
         false
     'delete': (endpoint, obj, cb) ->
+      loading++
       $http.delete (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}")
       .then (response) =>
+        loading--
         endpoints[endpoint].needsRefresh = true
         ndxCheck and ndxCheck.setPristine()
         callRefreshFns endpoint
         response and response.data and cb?(response.data)
       , (err) ->
+        loading--
         false
     search: (endpoint, args, obj, cb) ->
+      loading++
       args = args or {}
       $http.post (endpoint.route or "/api/#{endpoint}/search#{cacheBuster()}"), if endpoint.route and args and args.where then args.where else args
       .then (response) ->
+        loading--
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -205,14 +214,17 @@ module.provider 'rest', ->
           restoreSpecialProps obj.items, clonedProps
         cb? obj
       , (err) ->
+        loading--
         obj.items = []
         obj.total = 0
         obj.page = 1
         obj.error = err
         cb? obj
     list: (endpoint, obj, cb) ->
+      loading++
       $http.post (endpoint.route or "/api/#{endpoint}#{cacheBuster()}")
       .then (response) ->
+        loading--
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -221,16 +233,19 @@ module.provider 'rest', ->
           restoreSpecialProps obj.items, clonedProps
         cb? obj
       , (err) ->
+        loading--
         obj.items = []
         obj.total = 0
         obj.page = 1
         obj.error = err
         cb? obj
     single: (endpoint, id, obj, cb) ->
+      loading++
       if Object.prototype.toString.call(id) is '[object Object]'
         id = escape JSON.stringify id
       $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
       .then (response) ->
+        loading--
         clonedProps = null
         if obj.item
           clonedProps = cloneSpecialProps obj.items
@@ -239,6 +254,7 @@ module.provider 'rest', ->
           restoreSpecialProps obj.item, clonedProps
         cb? obj
       , (err) ->
+        loading--
         obj.item = {}
         cb? obj
     register: (fn) ->
@@ -283,6 +299,8 @@ module.provider 'rest', ->
       result
       
   root = Object.getPrototypeOf $rootScope
+  root.restLoading = ->
+    loading
   root.list = (endpoint, args, cb, saveCb, locked) ->
     ignoreNextWatch = false
     if args

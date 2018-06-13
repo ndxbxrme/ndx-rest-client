@@ -45,7 +45,7 @@
         return waitForAuth = val;
       },
       $get: function($http, $injector, $timeout) {
-        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
+        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, loading, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
         okToLoad = true;
         endpoints = {};
         autoId = '_id';
@@ -54,6 +54,7 @@
         ndxCheck = null;
         needsRefresh = false;
         maintenanceMode = false;
+        loading = 0;
         listTransform = {
           items: true,
           total: true,
@@ -272,33 +273,41 @@
             return okToLoad;
           },
           save: function(endpoint, obj, cb) {
+            loading++;
             return $http.post((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || '')), obj).then((function(_this) {
               return function(response) {
+                loading--;
                 endpoints[endpoint].needsRefresh = true;
                 ndxCheck && ndxCheck.setPristine();
                 callRefreshFns(endpoint);
                 return response && response.data && (typeof cb === "function" ? cb(response.data) : void 0);
               };
             })(this), function(err) {
+              loading--;
               return false;
             });
           },
           'delete': function(endpoint, obj, cb) {
+            loading++;
             return $http["delete"]((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || ''))).then((function(_this) {
               return function(response) {
+                loading--;
                 endpoints[endpoint].needsRefresh = true;
                 ndxCheck && ndxCheck.setPristine();
                 callRefreshFns(endpoint);
                 return response && response.data && (typeof cb === "function" ? cb(response.data) : void 0);
               };
             })(this), function(err) {
+              loading--;
               return false;
             });
           },
           search: function(endpoint, args, obj, cb) {
+            loading++;
             args = args || {};
             return $http.post(endpoint.route || ("/api/" + endpoint + "/search" + (cacheBuster())), endpoint.route && args && args.where ? args.where : args).then(function(response) {
               var clonedProps;
+              loading--;
               clonedProps = null;
               if (obj.items && obj.items.length) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -309,6 +318,7 @@
               }
               return typeof cb === "function" ? cb(obj) : void 0;
             }, function(err) {
+              loading--;
               obj.items = [];
               obj.total = 0;
               obj.page = 1;
@@ -317,8 +327,10 @@
             });
           },
           list: function(endpoint, obj, cb) {
+            loading++;
             return $http.post(endpoint.route || ("/api/" + endpoint + (cacheBuster()))).then(function(response) {
               var clonedProps;
+              loading--;
               clonedProps = null;
               if (obj.items && obj.items.length) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -329,6 +341,7 @@
               }
               return typeof cb === "function" ? cb(obj) : void 0;
             }, function(err) {
+              loading--;
               obj.items = [];
               obj.total = 0;
               obj.page = 1;
@@ -337,11 +350,13 @@
             });
           },
           single: function(endpoint, id, obj, cb) {
+            loading++;
             if (Object.prototype.toString.call(id) === '[object Object]') {
               id = escape(JSON.stringify(id));
             }
             return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (obj.all ? '/all' : '') + (cacheBuster()))).then(function(response) {
               var clonedProps;
+              loading--;
               clonedProps = null;
               if (obj.item) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -352,6 +367,7 @@
               }
               return typeof cb === "function" ? cb(obj) : void 0;
             }, function(err) {
+              loading--;
               obj.item = {};
               return typeof cb === "function" ? cb(obj) : void 0;
             });
@@ -412,6 +428,9 @@
       };
     };
     root = Object.getPrototypeOf($rootScope);
+    root.restLoading = function() {
+      return loading;
+    };
     root.list = function(endpoint, args, cb, saveCb, locked) {
       var RefreshFn, dereg, ignoreNextWatch, obj, throttledSearch;
       ignoreNextWatch = false;
