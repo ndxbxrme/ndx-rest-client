@@ -378,7 +378,10 @@
           dereg: function(fn) {
             return refreshFns.splice(refreshFns.indexOf(fn), 1);
           },
-          destroy: destroy
+          destroy: destroy,
+          loading: function() {
+            return loading;
+          }
         };
       }
     };
@@ -428,9 +431,7 @@
       };
     };
     root = Object.getPrototypeOf($rootScope);
-    root.restLoading = function() {
-      return loading;
-    };
+    root.restLoading = rest.loading;
     root.list = function(endpoint, args, cb, saveCb, locked) {
       var RefreshFn, dereg, ignoreNextWatch, obj, throttledSearch;
       ignoreNextWatch = false;

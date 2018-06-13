@@ -262,6 +262,8 @@ module.provider 'rest', ->
     dereg: (fn) ->
       refreshFns.splice refreshFns.indexOf(fn), 1
     destroy: destroy
+    loading: ->
+      loading
 .run ($rootScope, $http, $timeout, rest) ->
   #borrowed from underscore.js
   throttle = (func, wait, options) ->
@@ -299,8 +301,7 @@ module.provider 'rest', ->
       result
       
   root = Object.getPrototypeOf $rootScope
-  root.restLoading = ->
-    loading
+  root.restLoading = rest.loading
   root.list = (endpoint, args, cb, saveCb, locked) ->
     ignoreNextWatch = false
     if args
