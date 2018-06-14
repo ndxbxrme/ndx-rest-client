@@ -37,12 +37,12 @@ module.provider 'rest', ->
       page: true
       pageSize: true
       error: true
-    callRefreshFns = ->
+    callRefreshFns = (isSocket) ->
       if okToLoad and endpoints
         for key of endpoints
           if endpoints[key].needsRefresh
             for fn in refreshFns
-              fn key, endpoints[key].ids
+              fn key, endpoints[key].ids, isSocket
             endpoints[key].ids = []
             endpoints[key].needsRefresh = false
     destroy = (obj) ->
@@ -129,7 +129,7 @@ module.provider 'rest', ->
         else
           for key of endpoints
             endpoints[key].needsRefresh = true
-        callRefreshFns()
+        callRefreshFns true
       
     if $injector.has 'socket'
       socket = $injector.get 'socket'
@@ -200,12 +200,12 @@ module.provider 'rest', ->
       , (err) ->
         loading--
         false
-    search: (endpoint, args, obj, cb) ->
-      loading++
+    search: (endpoint, args, obj, cb, isSocket) ->
+      isSocket or loading++
       args = args or {}
       $http.post (endpoint.route or "/api/#{endpoint}/search#{cacheBuster()}"), if endpoint.route and args and args.where then args.where else args
       .then (response) ->
-        loading--
+        isSocket or loading--
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -214,17 +214,17 @@ module.provider 'rest', ->
           restoreSpecialProps obj.items, clonedProps
         cb? obj
       , (err) ->
-        loading--
+        isSocket or loading--
         obj.items = []
         obj.total = 0
         obj.page = 1
         obj.error = err
         cb? obj
-    list: (endpoint, obj, cb) ->
-      loading++
+    list: (endpoint, obj, cb, isSocket) ->
+      isSocket or loading++
       $http.post (endpoint.route or "/api/#{endpoint}#{cacheBuster()}")
       .then (response) ->
-        loading--
+        isSocket or loading--
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -233,19 +233,19 @@ module.provider 'rest', ->
           restoreSpecialProps obj.items, clonedProps
         cb? obj
       , (err) ->
-        loading--
+        isSocket or loading--
         obj.items = []
         obj.total = 0
         obj.page = 1
         obj.error = err
         cb? obj
-    single: (endpoint, id, obj, cb) ->
-      loading++
+    single: (endpoint, id, obj, cb, isSocket) ->
+      isSocket or loading++
       if Object.prototype.toString.call(id) is '[object Object]'
         id = escape JSON.stringify id
       $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
       .then (response) ->
-        loading--
+        isSocket or loading--
         clonedProps = null
         if obj.item
           clonedProps = cloneSpecialProps obj.items
@@ -254,7 +254,7 @@ module.provider 'rest', ->
           restoreSpecialProps obj.item, clonedProps
         cb? obj
       , (err) ->
-        loading--
+        isSocket or loading--
         obj.item = {}
         cb? obj
     register: (fn) ->
@@ -329,7 +329,7 @@ module.provider 'rest', ->
         dereg?()
         rest.dereg obj.refreshFn
     throttledSearch = throttle rest.search, 1000
-    RefreshFn = (endpoint, args) ->
+    RefreshFn = (endpoint, args, isSocket) ->
       (table) ->
         if args?.preRefresh
           args.preRefresh args
@@ -341,7 +341,7 @@ module.provider 'rest', ->
             if endpoint.endpoints and table
               for ep in endpoint.endpoints
                 if table is ep
-                  throttledSearch endpoint, args, obj, cb
+                  throttledSearch endpoint, args, obj, cb, isSocket
                   break
           else
             if table is endpoint or not table
@@ -398,7 +398,7 @@ module.provider 'rest', ->
       destroy: ->
         rest.dereg obj.refreshFn
     throttledSingle = throttle rest.single, 1000
-    RefreshFn = (endpoint, id) ->
+    RefreshFn = (endpoint, id, isSocket) ->
       (table, ids) ->
         if ids and obj.item and ids.indexOf(obj.item[rest.autoId]) is -1
           return
@@ -408,11 +408,11 @@ module.provider 'rest', ->
               if endpoint.endpoints.length and table
                 for ep in endpoint.endpoints
                   if table is ep
-                    throttledSingle endpoint, id, obj, cb
+                    throttledSingle endpoint, id, obj, cb, isSocket
                     break
           else
             if table is endpoint or not table
-              throttledSingle endpoint, id, obj, cb
+              throttledSingle endpoint, id, obj, cb, isSocket
     obj.refreshFn = RefreshFn endpoint, id
     rest.register obj.refreshFn
     if rest.okToLoad() and rest.endpoints.endpoints

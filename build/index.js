@@ -62,7 +62,7 @@
           pageSize: true,
           error: true
         };
-        callRefreshFns = function() {
+        callRefreshFns = function(isSocket) {
           var fn, i, key, len, results;
           if (okToLoad && endpoints) {
             results = [];
@@ -70,7 +70,7 @@
               if (endpoints[key].needsRefresh) {
                 for (i = 0, len = refreshFns.length; i < len; i++) {
                   fn = refreshFns[i];
-                  fn(key, endpoints[key].ids);
+                  fn(key, endpoints[key].ids, isSocket);
                 }
                 endpoints[key].ids = [];
                 results.push(endpoints[key].needsRefresh = false);
@@ -203,7 +203,7 @@
                 endpoints[key].needsRefresh = true;
               }
             }
-            return callRefreshFns();
+            return callRefreshFns(true);
           }
         };
         if ($injector.has('socket')) {
@@ -302,12 +302,12 @@
               return false;
             });
           },
-          search: function(endpoint, args, obj, cb) {
-            loading++;
+          search: function(endpoint, args, obj, cb, isSocket) {
+            isSocket || loading++;
             args = args || {};
             return $http.post(endpoint.route || ("/api/" + endpoint + "/search" + (cacheBuster())), endpoint.route && args && args.where ? args.where : args).then(function(response) {
               var clonedProps;
-              loading--;
+              isSocket || loading--;
               clonedProps = null;
               if (obj.items && obj.items.length) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -318,7 +318,7 @@
               }
               return typeof cb === "function" ? cb(obj) : void 0;
             }, function(err) {
-              loading--;
+              isSocket || loading--;
               obj.items = [];
               obj.total = 0;
               obj.page = 1;
@@ -326,11 +326,11 @@
               return typeof cb === "function" ? cb(obj) : void 0;
             });
           },
-          list: function(endpoint, obj, cb) {
-            loading++;
+          list: function(endpoint, obj, cb, isSocket) {
+            isSocket || loading++;
             return $http.post(endpoint.route || ("/api/" + endpoint + (cacheBuster()))).then(function(response) {
               var clonedProps;
-              loading--;
+              isSocket || loading--;
               clonedProps = null;
               if (obj.items && obj.items.length) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -341,7 +341,7 @@
               }
               return typeof cb === "function" ? cb(obj) : void 0;
             }, function(err) {
-              loading--;
+              isSocket || loading--;
               obj.items = [];
               obj.total = 0;
               obj.page = 1;
@@ -349,14 +349,14 @@
               return typeof cb === "function" ? cb(obj) : void 0;
             });
           },
-          single: function(endpoint, id, obj, cb) {
-            loading++;
+          single: function(endpoint, id, obj, cb, isSocket) {
+            isSocket || loading++;
             if (Object.prototype.toString.call(id) === '[object Object]') {
               id = escape(JSON.stringify(id));
             }
             return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (obj.all ? '/all' : '') + (cacheBuster()))).then(function(response) {
               var clonedProps;
-              loading--;
+              isSocket || loading--;
               clonedProps = null;
               if (obj.item) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -367,7 +367,7 @@
               }
               return typeof cb === "function" ? cb(obj) : void 0;
             }, function(err) {
-              loading--;
+              isSocket || loading--;
               obj.item = {};
               return typeof cb === "function" ? cb(obj) : void 0;
             });
@@ -471,7 +471,7 @@
         }
       };
       throttledSearch = throttle(rest.search, 1000);
-      RefreshFn = function(endpoint, args) {
+      RefreshFn = function(endpoint, args, isSocket) {
         return function(table) {
           var ep, i, len, ref, results;
           if (args != null ? args.preRefresh : void 0) {
@@ -489,7 +489,7 @@
                 for (i = 0, len = ref.length; i < len; i++) {
                   ep = ref[i];
                   if (table === ep) {
-                    throttledSearch(endpoint, args, obj, cb);
+                    throttledSearch(endpoint, args, obj, cb, isSocket);
                     break;
                   } else {
                     results.push(void 0);
@@ -578,7 +578,7 @@
         }
       };
       throttledSingle = throttle(rest.single, 1000);
-      RefreshFn = function(endpoint, id) {
+      RefreshFn = function(endpoint, id, isSocket) {
         return function(table, ids) {
           var ep, i, len, ref, results;
           if (ids && obj.item && ids.indexOf(obj.item[rest.autoId]) === -1) {
@@ -593,7 +593,7 @@
                   for (i = 0, len = ref.length; i < len; i++) {
                     ep = ref[i];
                     if (table === ep) {
-                      throttledSingle(endpoint, id, obj, cb);
+                      throttledSingle(endpoint, id, obj, cb, isSocket);
                       break;
                     } else {
                       results.push(void 0);
@@ -604,7 +604,7 @@
               }
             } else {
               if (table === endpoint || !table) {
-                return throttledSingle(endpoint, id, obj, cb);
+                return throttledSingle(endpoint, id, obj, cb, isSocket);
               }
             }
           }
