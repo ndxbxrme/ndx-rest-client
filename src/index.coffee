@@ -201,11 +201,11 @@ module.provider 'rest', ->
         loading--
         false
     search: (endpoint, args, obj, cb, isSocket) ->
-      isSocket or args.isSocket or loading++
+      isSocket or loading++
       args = args or {}
       $http.post (endpoint.route or "/api/#{endpoint}/search#{cacheBuster()}"), if endpoint.route and args and args.where then args.where else args
       .then (response) ->
-        isSocket or args.isSocket or loading--
+        isSocket or loading--
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -215,7 +215,7 @@ module.provider 'rest', ->
         obj.isSocket = isSocket
         cb? obj
       , (err) ->
-        isSocket or args.isSocket or loading--
+        isSocket or loading--
         obj.items = []
         obj.total = 0
         obj.page = 1
@@ -223,10 +223,10 @@ module.provider 'rest', ->
         obj.isSocket = isSocket
         cb? obj
     list: (endpoint, obj, cb, isSocket) ->
-      isSocket or args.isSocket or loading++
+      isSocket or loading++
       $http.post (endpoint.route or "/api/#{endpoint}#{cacheBuster()}")
       .then (response) ->
-        isSocket or args.isSocket or loading--
+        isSocket or loading--
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -236,7 +236,7 @@ module.provider 'rest', ->
         obj.isSocket = isSocket
         cb? obj
       , (err) ->
-        isSocket or args.isSocket or loading--
+        isSocket or loading--
         obj.items = []
         obj.total = 0
         obj.page = 1
@@ -244,12 +244,12 @@ module.provider 'rest', ->
         obj.isSocket = isSocket
         cb? obj
     single: (endpoint, id, obj, cb, isSocket) ->
-      isSocket or args.isSocket or loading++
+      isSocket or loading++
       if Object.prototype.toString.call(id) is '[object Object]'
         id = escape JSON.stringify id
       $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
       .then (response) ->
-        isSocket or args.isSocket or loading--
+        isSocket or loading--
         clonedProps = null
         if obj.item
           clonedProps = cloneSpecialProps obj.items
@@ -259,7 +259,7 @@ module.provider 'rest', ->
         obj.isSocket = isSocket
         cb? obj
       , (err) ->
-        isSocket or args.isSocket or loading--
+        isSocket or loading--
         obj.item = {}
         obj.isSocket = isSocket
         cb? obj
@@ -347,11 +347,11 @@ module.provider 'rest', ->
             if endpoint.endpoints and table
               for ep in endpoint.endpoints
                 if table is ep
-                  throttledSearch endpoint, args, obj, cb, isSocket
+                  throttledSearch endpoint, args, obj, cb, (isSocket or obj.args.isSocket)
                   break
           else
             if table is endpoint or not table
-              throttledSearch endpoint, args, obj, cb, isSocket
+              throttledSearch endpoint, args, obj, cb, (isSocket or obj.args.isSocket)
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn 
     if endpoint.route and not endpoint.endpoints
