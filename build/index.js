@@ -12,10 +12,11 @@
   }
 
   module.provider('rest', function() {
-    var bustCache, cacheBuster, callbacks, lockAll, syncCallback, waitForAuth;
+    var bustCache, cacheBuster, callbacks, disableCache, hash, lockAll, syncCallback, waitForAuth;
     waitForAuth = false;
     bustCache = false;
     lockAll = false;
+    disableCache = false;
     cacheBuster = function() {
       if (bustCache) {
         return "?" + (Math.floor(Math.random() * 9999999999999));
@@ -27,15 +28,24 @@
       endpoints: []
     };
     syncCallback = function(name, obj, cb) {
-      var callback, i, len, ref;
+      var callback, j, len, ref;
       if (callbacks[name] && callbacks[name].length) {
         ref = callbacks[name];
-        for (i = 0, len = ref.length; i < len; i++) {
-          callback = ref[i];
+        for (j = 0, len = ref.length; j < len; j++) {
+          callback = ref[j];
           callback(obj);
         }
       }
       return typeof cb === "function" ? cb() : void 0;
+    };
+    hash = function(str) {
+      var h, i;
+      h = 5381;
+      i = str.length;
+      while (i) {
+        h = (h * 33) ^ str.charCodeAt(--i);
+      }
+      return h;
     };
     return {
       bustCache: function(val) {
@@ -44,8 +54,11 @@
       waitForAuth: function(val) {
         return waitForAuth = val;
       },
+      disableCache: function(val) {
+        return disableCache = val;
+      },
       $get: function($http, $injector, $timeout) {
-        var auth, autoId, callRefreshFns, cloneSpecialProps, destroy, endpoints, listTransform, loading, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
+        var addToCache, auth, autoId, cache, callRefreshFns, clearCache, cloneSpecialProps, destroy, endpoints, fetchFromCache, listTransform, loading, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
         okToLoad = true;
         endpoints = {};
         autoId = '_id';
@@ -62,14 +75,42 @@
           pageSize: true,
           error: true
         };
+        cache = {};
+        addToCache = function(endpoint, args, obj) {
+          var h;
+          if (!disableCache) {
+            h = hash(JSON.stringify(args));
+            if (!cache[endpoint]) {
+              cache[endpoint] = {};
+            }
+            return cache[endpoint][h] = obj;
+          }
+        };
+        fetchFromCache = function(endpoint, args) {
+          var h;
+          if (!disableCache) {
+            h = hash(JSON.stringify(args));
+            if (cache[endpoint]) {
+              return cache[endpoint][h];
+            }
+          }
+          return null;
+        };
+        clearCache = function(endpoint) {
+          if (endpoint) {
+            return delete cache[endpoint];
+          } else {
+            return cache = {};
+          }
+        };
         callRefreshFns = function(isSocket) {
-          var fn, i, key, len, results;
+          var fn, j, key, len, results;
           if (okToLoad && endpoints) {
             results = [];
             for (key in endpoints) {
               if (endpoints[key].needsRefresh) {
-                for (i = 0, len = refreshFns.length; i < len; i++) {
-                  fn = refreshFns[i];
+                for (j = 0, len = refreshFns.length; j < len; j++) {
+                  fn = refreshFns[j];
                   fn(key, endpoints[key].ids, isSocket);
                 }
                 endpoints[key].ids = [];
@@ -82,49 +123,49 @@
           }
         };
         destroy = function(obj) {
-          var i, item, j, key, len, len1, type;
+          var item, j, k, key, len, len1, type;
           type = Object.prototype.toString.call(obj);
           if (type === '[object Object]') {
             if (obj.destroy) {
               obj.destroy();
             }
-            for (i = 0, len = obj.length; i < len; i++) {
-              key = obj[i];
+            for (j = 0, len = obj.length; j < len; j++) {
+              key = obj[j];
               destroy(obj[key]);
             }
           } else if (type === '[object Array]') {
-            for (j = 0, len1 = obj.length; j < len1; j++) {
-              item = obj[j];
+            for (k = 0, len1 = obj.length; k < len1; k++) {
+              item = obj[k];
               destroy(item);
             }
           }
         };
         restore = function(obj) {
-          var i, item, j, key, len, len1, type;
+          var item, j, k, key, len, len1, type;
           type = Object.prototype.toString.call(obj);
           if (type === '[object Object]') {
             if (obj.refreshFn) {
               refreshFns.push(obj.refreshFn);
             }
-            for (i = 0, len = obj.length; i < len; i++) {
-              key = obj[i];
+            for (j = 0, len = obj.length; j < len; j++) {
+              key = obj[j];
               restore(obj[key]);
             }
           } else if (type === '[object Array]') {
-            for (j = 0, len1 = obj.length; j < len1; j++) {
-              item = obj[j];
+            for (k = 0, len1 = obj.length; k < len1; k++) {
+              item = obj[k];
               restore(item);
             }
           }
         };
         cloneSpecialProps = function(obj) {
-          var clonedItem, i, item, key, len, output, type;
+          var clonedItem, item, j, key, len, output, type;
           output = null;
           type = Object.prototype.toString.call(obj);
           if (type === '[object Array]') {
             output = output || [];
-            for (i = 0, len = obj.length; i < len; i++) {
-              item = obj[i];
+            for (j = 0, len = obj.length; j < len; j++) {
+              item = obj[j];
               if (item[autoId]) {
                 clonedItem = cloneSpecialProps(item);
                 clonedItem[autoId] = item[autoId];
@@ -144,13 +185,13 @@
           return output;
         };
         restoreSpecialProps = function(obj, clonedProps) {
-          var clonedItem, i, item, j, key, len, len1, type;
+          var clonedItem, item, j, k, key, len, len1, type;
           type = Object.prototype.toString.call(obj);
           if (type === '[object Array]') {
-            for (i = 0, len = obj.length; i < len; i++) {
-              item = obj[i];
-              for (j = 0, len1 = clonedProps.length; j < len1; j++) {
-                clonedItem = clonedProps[j];
+            for (j = 0, len = obj.length; j < len; j++) {
+              item = obj[j];
+              for (k = 0, len1 = clonedProps.length; k < len1; k++) {
+                clonedItem = clonedProps[k];
                 if (item[autoId] === clonedItem[autoId]) {
                   restoreSpecialProps(item, clonedItem);
                   break;
@@ -189,6 +230,7 @@
           var id, key, type;
           if (!lockAll) {
             if (data) {
+              clearCache(data.table);
               endpoints[data.table].needsRefresh = true;
               type = Object.prototype.toString.call(data.id);
               if (type === '[object Array]') {
@@ -199,6 +241,7 @@
                 endpoints[data.table].ids.push(data.id);
               }
             } else {
+              clearCache();
               for (key in endpoints) {
                 endpoints[key].needsRefresh = true;
               }
@@ -219,11 +262,11 @@
         }
         $timeout(function() {
           return $http.get('/rest/endpoints').then(function(response) {
-            var endpoint, i, len, ref;
+            var endpoint, j, len, ref;
             if (response.data && response.data.endpoints && response.data.endpoints.length) {
               ref = response.data.endpoints;
-              for (i = 0, len = ref.length; i < len; i++) {
-                endpoint = ref[i];
+              for (j = 0, len = ref.length; j < len; j++) {
+                endpoint = ref[j];
                 endpoints[endpoint] = {
                   needsRefresh: true,
                   lastRefresh: 0,
@@ -303,9 +346,10 @@
             });
           },
           search: function(endpoint, args, obj, cb, isSocket) {
+            var handleResponse, response;
             isSocket || loading++;
             args = args || {};
-            return $http.post(endpoint.route || ("/api/" + endpoint + "/search" + (cacheBuster())), endpoint.route && args && args.where ? args.where : args).then(function(response) {
+            handleResponse = function(response) {
               var clonedProps;
               isSocket || loading--;
               clonedProps = null;
@@ -318,19 +362,28 @@
               }
               obj.isSocket = isSocket;
               return typeof cb === "function" ? cb(obj) : void 0;
-            }, function(err) {
-              isSocket || loading--;
-              obj.items = [];
-              obj.total = 0;
-              obj.page = 1;
-              obj.error = err;
-              obj.isSocket = isSocket;
-              return typeof cb === "function" ? cb(obj) : void 0;
-            });
+            };
+            if (response = fetchFromCache(endpoint, args)) {
+              return handleResponse(response);
+            } else {
+              return $http.post(endpoint.route || ("/api/" + endpoint + "/search" + (cacheBuster())), endpoint.route && args && args.where ? args.where : args).then(function(response) {
+                addToCache(endpoint, args, response);
+                return handleResponse(response);
+              }, function(err) {
+                isSocket || loading--;
+                obj.items = [];
+                obj.total = 0;
+                obj.page = 1;
+                obj.error = err;
+                obj.isSocket = isSocket;
+                return typeof cb === "function" ? cb(obj) : void 0;
+              });
+            }
           },
           list: function(endpoint, obj, cb, isSocket) {
+            var handleResponse, response;
             isSocket || loading++;
-            return $http.post(endpoint.route || ("/api/" + endpoint + (cacheBuster()))).then(function(response) {
+            handleResponse = function(response) {
               var clonedProps;
               isSocket || loading--;
               clonedProps = null;
@@ -343,22 +396,28 @@
               }
               obj.isSocket = isSocket;
               return typeof cb === "function" ? cb(obj) : void 0;
-            }, function(err) {
-              isSocket || loading--;
-              obj.items = [];
-              obj.total = 0;
-              obj.page = 1;
-              obj.error = err;
-              obj.isSocket = isSocket;
-              return typeof cb === "function" ? cb(obj) : void 0;
-            });
+            };
+            if (response = fetchFromCache(endpoint, {})) {
+              return handleResponse(response);
+            } else {
+              return $http.post(endpoint.route || ("/api/" + endpoint + (cacheBuster()))).then(function(response) {
+                addToCache(endpoint, {}, response);
+                return handleResponse(response);
+              }, function(err) {
+                isSocket || loading--;
+                obj.items = [];
+                obj.total = 0;
+                obj.page = 1;
+                obj.error = err;
+                obj.isSocket = isSocket;
+                return typeof cb === "function" ? cb(obj) : void 0;
+              });
+            }
           },
           single: function(endpoint, id, obj, cb, isSocket) {
+            var handleResponse, response;
             isSocket || loading++;
-            if (Object.prototype.toString.call(id) === '[object Object]') {
-              id = escape(JSON.stringify(id));
-            }
-            return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (obj.all ? '/all' : '') + (cacheBuster()))).then(function(response) {
+            handleResponse = function(response) {
               var clonedProps;
               isSocket || loading--;
               clonedProps = null;
@@ -371,12 +430,27 @@
               }
               obj.isSocket = isSocket;
               return typeof cb === "function" ? cb(obj) : void 0;
-            }, function(err) {
-              isSocket || loading--;
-              obj.item = {};
-              obj.isSocket = isSocket;
-              return typeof cb === "function" ? cb(obj) : void 0;
-            });
+            };
+            if (Object.prototype.toString.call(id) === '[object Object]') {
+              id = escape(JSON.stringify(id));
+            }
+            if (response = fetchFromCache(endpoint, {
+              id: id
+            })) {
+              return handleResponse(response);
+            } else {
+              return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (obj.all ? '/all' : '') + (cacheBuster()))).then(function(response) {
+                addToCache(endpoint, {
+                  id: id
+                }, response);
+                return handleResponse(response);
+              }, function(err) {
+                isSocket || loading--;
+                obj.item = {};
+                obj.isSocket = isSocket;
+                return typeof cb === "function" ? cb(obj) : void 0;
+              });
+            }
           },
           register: function(fn) {
             return refreshFns.push(fn);
@@ -387,7 +461,8 @@
           destroy: destroy,
           loading: function() {
             return loading;
-          }
+          },
+          clearCache: clearCache
         };
       }
     };
@@ -479,7 +554,7 @@
       throttledSearch = throttle(rest.search, 1000);
       RefreshFn = function(endpoint, args) {
         return function(table, blank, isSocket) {
-          var ep, i, len, ref, results;
+          var ep, j, len, ref, results;
           if (args != null ? args.preRefresh : void 0) {
             args.preRefresh(args);
             ignoreNextWatch = true;
@@ -492,8 +567,8 @@
               if (endpoint.endpoints && table) {
                 ref = endpoint.endpoints;
                 results = [];
-                for (i = 0, len = ref.length; i < len; i++) {
-                  ep = ref[i];
+                for (j = 0, len = ref.length; j < len; j++) {
+                  ep = ref[j];
                   if (table === ep) {
                     throttledSearch(endpoint, args, obj, cb, isSocket || obj.args.isSocket);
                     break;
@@ -586,7 +661,7 @@
       throttledSingle = throttle(rest.single, 1000);
       RefreshFn = function(endpoint, id) {
         return function(table, ids, isSocket) {
-          var ep, i, len, ref, results;
+          var ep, j, len, ref, results;
           if (ids && obj.item && ids.indexOf(obj.item[rest.autoId]) === -1) {
             return;
           }
@@ -596,8 +671,8 @@
                 if (endpoint.endpoints.length && table) {
                   ref = endpoint.endpoints;
                   results = [];
-                  for (i = 0, len = ref.length; i < len; i++) {
-                    ep = ref[i];
+                  for (j = 0, len = ref.length; j < len; j++) {
+                    ep = ref[j];
                     if (table === ep) {
                       throttledSingle(endpoint, id, obj, cb, isSocket);
                       break;

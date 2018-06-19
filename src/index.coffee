@@ -8,6 +8,7 @@ module.provider 'rest', ->
   waitForAuth = false
   bustCache = false
   lockAll = false
+  disableCache = false
   cacheBuster = ->
     if bustCache then "?#{Math.floor(Math.random() * 9999999999999)}" else ''
   callbacks =
@@ -17,10 +18,18 @@ module.provider 'rest', ->
       for callback in callbacks[name]
         callback obj
     cb?()
+  hash = (str) ->
+    h = 5381
+    i = str.length
+    while i
+      h = (h * 33) ^ str.charCodeAt --i
+    h
   bustCache: (val) ->
     bustCache = val
   waitForAuth: (val) ->
     waitForAuth = val
+  disableCache: (val) ->
+    disableCache = val
   $get: ($http, $injector, $timeout) ->
     okToLoad = true
     endpoints = {}
@@ -37,6 +46,24 @@ module.provider 'rest', ->
       page: true
       pageSize: true
       error: true
+    cache = {}
+    addToCache = (endpoint, args, obj) ->
+      if not disableCache
+        h = hash JSON.stringify args
+        if not cache[endpoint]
+          cache[endpoint] = {}
+        cache[endpoint][h] = obj
+    fetchFromCache = (endpoint, args) ->
+      if not disableCache
+        h = hash JSON.stringify args
+        if cache[endpoint]
+          return cache[endpoint][h]
+      return null
+    clearCache = (endpoint) ->
+      if endpoint
+        delete cache[endpoint]
+      else
+        cache = {}
     callRefreshFns = (isSocket) ->
       if okToLoad and endpoints
         for key of endpoints
@@ -119,6 +146,7 @@ module.provider 'rest', ->
     socketRefresh = (data) ->
       if not lockAll
         if data
+          clearCache data.table
           endpoints[data.table].needsRefresh = true
           type = Object.prototype.toString.call data.id
           if type is '[object Array]'
@@ -127,6 +155,7 @@ module.provider 'rest', ->
           else if type is '[object String]'
             endpoints[data.table].ids.push data.id
         else
+          clearCache()
           for key of endpoints
             endpoints[key].needsRefresh = true
         callRefreshFns true
@@ -203,8 +232,7 @@ module.provider 'rest', ->
     search: (endpoint, args, obj, cb, isSocket) ->
       isSocket or loading++
       args = args or {}
-      $http.post (endpoint.route or "/api/#{endpoint}/search#{cacheBuster()}"), if endpoint.route and args and args.where then args.where else args
-      .then (response) ->
+      handleResponse = (response) ->
         isSocket or loading--
         clonedProps = null
         if obj.items and obj.items.length
@@ -214,18 +242,24 @@ module.provider 'rest', ->
           restoreSpecialProps obj.items, clonedProps
         obj.isSocket = isSocket
         cb? obj
-      , (err) ->
-        isSocket or loading--
-        obj.items = []
-        obj.total = 0
-        obj.page = 1
-        obj.error = err
-        obj.isSocket = isSocket
-        cb? obj
+      if response = fetchFromCache endpoint, args
+        return handleResponse response
+      else
+        $http.post (endpoint.route or "/api/#{endpoint}/search#{cacheBuster()}"), if endpoint.route and args and args.where then args.where else args
+        .then (response) ->
+          addToCache endpoint, args, response
+          return handleResponse response
+        , (err) ->
+          isSocket or loading--
+          obj.items = []
+          obj.total = 0
+          obj.page = 1
+          obj.error = err
+          obj.isSocket = isSocket
+          cb? obj
     list: (endpoint, obj, cb, isSocket) ->
       isSocket or loading++
-      $http.post (endpoint.route or "/api/#{endpoint}#{cacheBuster()}")
-      .then (response) ->
+      handleResponse = (response) ->
         isSocket or loading--
         clonedProps = null
         if obj.items and obj.items.length
@@ -235,20 +269,24 @@ module.provider 'rest', ->
           restoreSpecialProps obj.items, clonedProps
         obj.isSocket = isSocket
         cb? obj
-      , (err) ->
-        isSocket or loading--
-        obj.items = []
-        obj.total = 0
-        obj.page = 1
-        obj.error = err
-        obj.isSocket = isSocket
-        cb? obj
+      if response = fetchFromCache(endpoint, {})
+        handleResponse response
+      else
+        $http.post (endpoint.route or "/api/#{endpoint}#{cacheBuster()}")
+        .then (response) ->
+          addToCache endpoint, {}, response
+          return handleResponse response
+        , (err) ->
+          isSocket or loading--
+          obj.items = []
+          obj.total = 0
+          obj.page = 1
+          obj.error = err
+          obj.isSocket = isSocket
+          cb? obj
     single: (endpoint, id, obj, cb, isSocket) ->
       isSocket or loading++
-      if Object.prototype.toString.call(id) is '[object Object]'
-        id = escape JSON.stringify id
-      $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
-      .then (response) ->
+      handleResponse = (response) ->
         isSocket or loading--
         clonedProps = null
         if obj.item
@@ -258,11 +296,20 @@ module.provider 'rest', ->
           restoreSpecialProps obj.item, clonedProps
         obj.isSocket = isSocket
         cb? obj
-      , (err) ->
-        isSocket or loading--
-        obj.item = {}
-        obj.isSocket = isSocket
-        cb? obj
+      if Object.prototype.toString.call(id) is '[object Object]'
+        id = escape JSON.stringify id
+      if response = fetchFromCache(endpoint, id:id)
+        handleResponse response
+      else
+        $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
+        .then (response) ->
+          addToCache endpoint, id:id, response
+          return handleResponse response
+        , (err) ->
+          isSocket or loading--
+          obj.item = {}
+          obj.isSocket = isSocket
+          cb? obj
     register: (fn) ->
       refreshFns.push fn
     dereg: (fn) ->
@@ -270,6 +317,7 @@ module.provider 'rest', ->
     destroy: destroy
     loading: ->
       loading
+    clearCache: clearCache
 .run ($rootScope, $http, $timeout, rest) ->
   #borrowed from underscore.js
   throttle = (func, wait, options) ->
