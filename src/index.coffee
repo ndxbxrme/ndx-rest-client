@@ -395,11 +395,11 @@ module.provider 'rest', ->
             if endpoint.endpoints and table
               for ep in endpoint.endpoints
                 if table is ep
-                  throttledSearch endpoint, args, obj, cb, (isSocket or obj.args.isSocket)
+                  throttledSearch endpoint, args, obj, cb, (isSocket or obj.args?.isSocket)
                   break
           else
             if table is endpoint or not table
-              throttledSearch endpoint, args, obj, cb, (isSocket or obj.args.isSocket)
+              throttledSearch endpoint, args, obj, cb, (isSocket or obj.args?.isSocket)
     obj.refreshFn = RefreshFn endpoint, args
     rest.register obj.refreshFn 
     if endpoint.route and not endpoint.endpoints

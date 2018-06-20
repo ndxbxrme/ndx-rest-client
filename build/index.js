@@ -554,7 +554,7 @@
       throttledSearch = throttle(rest.search, 1000);
       RefreshFn = function(endpoint, args) {
         return function(table, blank, isSocket) {
-          var ep, j, len, ref, results;
+          var ep, j, len, ref, ref1, ref2, results;
           if (args != null ? args.preRefresh : void 0) {
             args.preRefresh(args);
             ignoreNextWatch = true;
@@ -570,7 +570,7 @@
                 for (j = 0, len = ref.length; j < len; j++) {
                   ep = ref[j];
                   if (table === ep) {
-                    throttledSearch(endpoint, args, obj, cb, isSocket || obj.args.isSocket);
+                    throttledSearch(endpoint, args, obj, cb, isSocket || ((ref1 = obj.args) != null ? ref1.isSocket : void 0));
                     break;
                   } else {
                     results.push(void 0);
@@ -580,7 +580,7 @@
               }
             } else {
               if (table === endpoint || !table) {
-                return throttledSearch(endpoint, args, obj, cb, isSocket || obj.args.isSocket);
+                return throttledSearch(endpoint, args, obj, cb, isSocket || ((ref2 = obj.args) != null ? ref2.isSocket : void 0));
               }
             }
           }
