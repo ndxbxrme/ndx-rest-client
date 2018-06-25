@@ -58,7 +58,7 @@
         return disableCache = val;
       },
       $get: function($http, $injector, $timeout) {
-        var addToCache, auth, autoId, cache, callRefreshFns, clearCache, cloneSpecialProps, destroy, endpoints, fetchFromCache, listTransform, loading, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, waiting;
+        var addToCache, auth, autoId, cache, callRefreshFns, clearCache, cloneSpecialProps, destroy, endpoints, fetchFromCache, listTransform, loading, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, startLoading, stopLoading, waiting;
         okToLoad = true;
         endpoints = {};
         autoId = '_id';
@@ -68,6 +68,15 @@
         needsRefresh = false;
         maintenanceMode = false;
         loading = 0;
+        startLoading = function() {
+          return loading++;
+        };
+        stopLoading = function() {
+          loading--;
+          if (loading < 0) {
+            return loading = 0;
+          }
+        };
         listTransform = {
           items: true,
           total: true,
@@ -312,46 +321,48 @@
             return needsRefresh = val;
           },
           callRefreshFns: callRefreshFns,
+          startLoading: startLoading,
+          stopLoading: stopLoading,
           okToLoad: function() {
             return okToLoad;
           },
           save: function(endpoint, obj, cb) {
-            loading++;
+            startLoading();
             return $http.post((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || '')), obj).then((function(_this) {
               return function(response) {
-                loading--;
+                stopLoading();
                 endpoints[endpoint].needsRefresh = true;
                 ndxCheck && ndxCheck.setPristine();
                 callRefreshFns(endpoint);
                 return response && response.data && (typeof cb === "function" ? cb(response.data) : void 0);
               };
             })(this), function(err) {
-              loading--;
+              stopLoading();
               return false;
             });
           },
           'delete': function(endpoint, obj, cb) {
-            loading++;
+            startLoading();
             return $http["delete"]((endpoint.route || ("/api/" + endpoint)) + ("/" + (obj[autoId] || ''))).then((function(_this) {
               return function(response) {
-                loading--;
+                stopLoading();
                 endpoints[endpoint].needsRefresh = true;
                 ndxCheck && ndxCheck.setPristine();
                 callRefreshFns(endpoint);
                 return response && response.data && (typeof cb === "function" ? cb(response.data) : void 0);
               };
             })(this), function(err) {
-              loading--;
+              stopLoading();
               return false;
             });
           },
           search: function(endpoint, args, obj, cb, isSocket) {
             var handleResponse, response;
-            isSocket || loading++;
+            isSocket || startLoading();
             args = args || {};
             handleResponse = function(response) {
               var clonedProps;
-              isSocket || loading--;
+              isSocket || stopLoading();
               clonedProps = null;
               if (obj.items && obj.items.length) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -370,7 +381,7 @@
                 addToCache(endpoint, args, response);
                 return handleResponse(response);
               }, function(err) {
-                isSocket || loading--;
+                isSocket || stopLoading();
                 obj.items = [];
                 obj.total = 0;
                 obj.page = 1;
@@ -382,10 +393,10 @@
           },
           list: function(endpoint, obj, cb, isSocket) {
             var handleResponse, response;
-            isSocket || loading++;
+            isSocket || startLoading();
             handleResponse = function(response) {
               var clonedProps;
-              isSocket || loading--;
+              isSocket || stopLoading();
               clonedProps = null;
               if (obj.items && obj.items.length) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -404,7 +415,7 @@
                 addToCache(endpoint, {}, response);
                 return handleResponse(response);
               }, function(err) {
-                isSocket || loading--;
+                isSocket || stopLoading();
                 obj.items = [];
                 obj.total = 0;
                 obj.page = 1;
@@ -416,10 +427,10 @@
           },
           single: function(endpoint, id, obj, cb, isSocket) {
             var handleResponse, response;
-            isSocket || loading++;
+            isSocket || startLoading();
             handleResponse = function(response) {
               var clonedProps;
-              isSocket || loading--;
+              isSocket || stopLoading();
               clonedProps = null;
               if (obj.item) {
                 clonedProps = cloneSpecialProps(obj.items);
@@ -445,7 +456,7 @@
                 }, response);
                 return handleResponse(response);
               }, function(err) {
-                isSocket || loading--;
+                isSocket || stopLoading();
                 obj.item = {};
                 obj.isSocket = isSocket;
                 return typeof cb === "function" ? cb(obj) : void 0;

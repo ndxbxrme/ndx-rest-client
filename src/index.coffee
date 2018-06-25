@@ -40,6 +40,12 @@ module.provider 'rest', ->
     needsRefresh = false
     maintenanceMode = false
     loading = 0
+    startLoading = ->
+      loading++
+    stopLoading = ->
+      loading--
+      if loading < 0
+        loading = 0
     listTransform =
       items: true
       total: true
@@ -203,37 +209,39 @@ module.provider 'rest', ->
     needsRefresh: (val) ->
       needsRefresh = val
     callRefreshFns: callRefreshFns
+    startLoading: startLoading
+    stopLoading: stopLoading
     okToLoad: ->
       okToLoad
     save: (endpoint, obj, cb) ->
-      loading++
+      startLoading()
       $http.post (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}"), obj
       .then (response) =>
-        loading--
+        stopLoading()
         endpoints[endpoint].needsRefresh = true
         ndxCheck and ndxCheck.setPristine()
         callRefreshFns endpoint
         response and response.data and cb?(response.data)
       , (err) ->
-        loading--
+        stopLoading()
         false
     'delete': (endpoint, obj, cb) ->
-      loading++
+      startLoading()
       $http.delete (endpoint.route or "/api/#{endpoint}") + ("/#{obj[autoId] or ''}")
       .then (response) =>
-        loading--
+        stopLoading()
         endpoints[endpoint].needsRefresh = true
         ndxCheck and ndxCheck.setPristine()
         callRefreshFns endpoint
         response and response.data and cb?(response.data)
       , (err) ->
-        loading--
+        stopLoading()
         false
     search: (endpoint, args, obj, cb, isSocket) ->
-      isSocket or loading++
+      isSocket or startLoading()
       args = args or {}
       handleResponse = (response) ->
-        isSocket or loading--
+        isSocket or stopLoading()
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -250,7 +258,7 @@ module.provider 'rest', ->
           addToCache endpoint, args, response
           return handleResponse response
         , (err) ->
-          isSocket or loading--
+          isSocket or stopLoading()
           obj.items = []
           obj.total = 0
           obj.page = 1
@@ -258,9 +266,9 @@ module.provider 'rest', ->
           obj.isSocket = isSocket
           cb? obj
     list: (endpoint, obj, cb, isSocket) ->
-      isSocket or loading++
+      isSocket or startLoading()
       handleResponse = (response) ->
-        isSocket or loading--
+        isSocket or stopLoading()
         clonedProps = null
         if obj.items and obj.items.length
           clonedProps = cloneSpecialProps obj.items
@@ -277,7 +285,7 @@ module.provider 'rest', ->
           addToCache endpoint, {}, response
           return handleResponse response
         , (err) ->
-          isSocket or loading--
+          isSocket or stopLoading()
           obj.items = []
           obj.total = 0
           obj.page = 1
@@ -285,9 +293,9 @@ module.provider 'rest', ->
           obj.isSocket = isSocket
           cb? obj
     single: (endpoint, id, obj, cb, isSocket) ->
-      isSocket or loading++
+      isSocket or startLoading()
       handleResponse = (response) ->
-        isSocket or loading--
+        isSocket or stopLoading()
         clonedProps = null
         if obj.item
           clonedProps = cloneSpecialProps obj.items
@@ -306,7 +314,7 @@ module.provider 'rest', ->
           addToCache endpoint, id:id, response
           return handleResponse response
         , (err) ->
-          isSocket or loading--
+          isSocket or stopLoading()
           obj.item = {}
           obj.isSocket = isSocket
           cb? obj
