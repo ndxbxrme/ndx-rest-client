@@ -251,7 +251,8 @@ module.provider 'rest', ->
         obj.isSocket = isSocket
         cb? obj
       if response = fetchFromCache endpoint, args
-        return handleResponse response
+        $timeout ->
+          handleResponse response
       else
         $http.post (endpoint.route or "/api/#{endpoint}/search#{cacheBuster()}"), if endpoint.route and args and args.where then args.where else args
         .then (response) ->
@@ -278,7 +279,8 @@ module.provider 'rest', ->
         obj.isSocket = isSocket
         cb? obj
       if response = fetchFromCache(endpoint, {})
-        handleResponse response
+        $timeout ->
+          handleResponse response
       else
         $http.post (endpoint.route or "/api/#{endpoint}#{cacheBuster()}")
         .then (response) ->
@@ -307,7 +309,8 @@ module.provider 'rest', ->
       if Object.prototype.toString.call(id) is '[object Object]'
         id = escape JSON.stringify id
       if response = fetchFromCache(endpoint, id:id)
-        handleResponse response
+        $timeout ->
+          handleResponse response
       else
         $http.get (endpoint.route or "/api/#{endpoint}") + "/#{id}#{if obj.all then '/all' else ''}#{cacheBuster()}"
         .then (response) ->

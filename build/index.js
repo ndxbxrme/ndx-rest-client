@@ -375,7 +375,9 @@
               return typeof cb === "function" ? cb(obj) : void 0;
             };
             if (response = fetchFromCache(endpoint, args)) {
-              return handleResponse(response);
+              return $timeout(function() {
+                return handleResponse(response);
+              });
             } else {
               return $http.post(endpoint.route || ("/api/" + endpoint + "/search" + (cacheBuster())), endpoint.route && args && args.where ? args.where : args).then(function(response) {
                 addToCache(endpoint, args, response);
@@ -409,7 +411,9 @@
               return typeof cb === "function" ? cb(obj) : void 0;
             };
             if (response = fetchFromCache(endpoint, {})) {
-              return handleResponse(response);
+              return $timeout(function() {
+                return handleResponse(response);
+              });
             } else {
               return $http.post(endpoint.route || ("/api/" + endpoint + (cacheBuster()))).then(function(response) {
                 addToCache(endpoint, {}, response);
@@ -448,7 +452,9 @@
             if (response = fetchFromCache(endpoint, {
               id: id
             })) {
-              return handleResponse(response);
+              return $timeout(function() {
+                return handleResponse(response);
+              });
             } else {
               return $http.get((endpoint.route || ("/api/" + endpoint)) + ("/" + id + (obj.all ? '/all' : '') + (cacheBuster()))).then(function(response) {
                 addToCache(endpoint, {
