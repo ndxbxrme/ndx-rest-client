@@ -63,7 +63,8 @@ module.provider 'rest', ->
       if not disableCache
         h = hash JSON.stringify args
         if cache[endpoint]
-          return JSON.parse JSON.stringify cache[endpoint][h]
+          if cache[endpoint][h]
+            return JSON.parse JSON.stringify cache[endpoint][h]
       return null
     clearCache = (endpoint) ->
       if endpoint
