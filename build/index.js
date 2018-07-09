@@ -100,7 +100,7 @@
           if (!disableCache) {
             h = hash(JSON.stringify(args));
             if (cache[endpoint]) {
-              return cache[endpoint][h];
+              return JSON.parse(JSON.stringify(cache[endpoint][h]));
             }
           }
           return null;
