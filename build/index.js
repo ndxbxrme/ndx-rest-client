@@ -92,16 +92,20 @@
             if (!cache[endpoint]) {
               cache[endpoint] = {};
             }
-            return cache[endpoint][h] = obj;
+            return cache[endpoint][h] = JSON.stringify({
+              data: obj.data
+            });
           }
         };
         fetchFromCache = function(endpoint, args) {
-          var h;
+          var h, newvar, str;
           if (!disableCache) {
             h = hash(JSON.stringify(args));
             if (cache[endpoint]) {
               if (cache[endpoint][h]) {
-                return JSON.parse(JSON.stringify(cache[endpoint][h]));
+                str = cache[endpoint][h];
+                newvar = JSON.parse(str);
+                return newvar;
               }
             }
           }
@@ -439,7 +443,7 @@
               isSocket || stopLoading();
               clonedProps = null;
               if (obj.item) {
-                clonedProps = cloneSpecialProps(obj.items);
+                clonedProps = cloneSpecialProps(obj.item);
               }
               obj.item = response.data;
               if (obj.item && clonedProps) {
@@ -481,7 +485,10 @@
           loading: function() {
             return loading;
           },
-          clearCache: clearCache
+          clearCache: clearCache,
+          checkCache: function() {
+            return cache;
+          }
         };
       }
     };

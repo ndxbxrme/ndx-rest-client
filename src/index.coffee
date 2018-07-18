@@ -58,13 +58,15 @@ module.provider 'rest', ->
         h = hash JSON.stringify args
         if not cache[endpoint]
           cache[endpoint] = {}
-        cache[endpoint][h] = obj
+        cache[endpoint][h] =  JSON.stringify data: obj.data
     fetchFromCache = (endpoint, args) ->
       if not disableCache
         h = hash JSON.stringify args
         if cache[endpoint]
           if cache[endpoint][h]
-            return JSON.parse JSON.stringify cache[endpoint][h]
+            str = cache[endpoint][h]
+            newvar = JSON.parse str
+            return newvar
       return null
     clearCache = (endpoint) ->
       if endpoint
@@ -301,7 +303,7 @@ module.provider 'rest', ->
         isSocket or stopLoading()
         clonedProps = null
         if obj.item
-          clonedProps = cloneSpecialProps obj.items
+          clonedProps = cloneSpecialProps obj.item
         obj.item = response.data
         if obj.item and clonedProps
           restoreSpecialProps obj.item, clonedProps
@@ -330,6 +332,8 @@ module.provider 'rest', ->
     loading: ->
       loading
     clearCache: clearCache
+    checkCache: ->
+      cache
 .run ($rootScope, $http, $timeout, rest) ->
   #borrowed from underscore.js
   throttle = (func, wait, options) ->
