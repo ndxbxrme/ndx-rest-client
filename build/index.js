@@ -58,7 +58,7 @@
         return disableCache = val;
       },
       $get: function($http, $injector, $timeout) {
-        var addToCache, auth, autoId, cache, callRefreshFns, clearCache, cloneSpecialProps, destroy, endpoints, fetchFromCache, listTransform, loading, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, startLoading, stopLoading, waiting;
+        var addToCache, auth, autoId, cache, callRefreshFns, callSocketRefresh, clearCache, cloneSpecialProps, destroy, endpoints, fetchFromCache, listTransform, loading, maintenanceMode, ndxCheck, needsRefresh, okToLoad, refreshFns, restore, restoreSpecialProps, socket, socketRefresh, startLoading, stopLoading, waiting;
         okToLoad = true;
         endpoints = {};
         autoId = '_id';
@@ -241,12 +241,28 @@
             });
           });
         }
+        callSocketRefresh = function() {
+          var endpoint, hasFuture, key;
+          hasFuture = false;
+          for (key in endpoints) {
+            endpoint = endpoints[key];
+            if (endpoint.needsRefresh && endpoint.refreshAt > new Date().valueOf()) {
+              hasFuture = true;
+            }
+          }
+          if (hasFuture) {
+            return $timeout(callSocketRefresh, 20);
+          } else {
+            return callRefreshFns(true);
+          }
+        };
         socketRefresh = function(data) {
           var id, key, type;
           if (!lockAll) {
             if (data) {
               clearCache(data.table);
               endpoints[data.table].needsRefresh = true;
+              endpoints[data.table].refreshAt = new Date().valueOf() + 400;
               type = Object.prototype.toString.call(data.id);
               if (type === '[object Array]') {
                 for (id in data.id) {
@@ -261,7 +277,7 @@
                 endpoints[key].needsRefresh = true;
               }
             }
-            return callRefreshFns(true);
+            return callSocketRefresh();
           }
         };
         if ($injector.has('socket')) {

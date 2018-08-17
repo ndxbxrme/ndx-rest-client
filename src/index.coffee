@@ -151,12 +151,22 @@ module.provider 'rest', ->
             endpoints[endpoint].needsRefresh = true
           callRefreshFns()
           
-          
+    callSocketRefresh = ->
+      hasFuture = false
+      for key, endpoint of endpoints
+        if endpoint.needsRefresh and endpoint.refreshAt > new Date().valueOf()
+          hasFuture = true
+      if hasFuture
+        return $timeout callSocketRefresh, 20
+      else
+        callRefreshFns true
+    
     socketRefresh = (data) ->
       if not lockAll
         if data
           clearCache data.table
           endpoints[data.table].needsRefresh = true
+          endpoints[data.table].refreshAt = new Date().valueOf() + 400
           type = Object.prototype.toString.call data.id
           if type is '[object Array]'
             for id of data.id
@@ -167,7 +177,7 @@ module.provider 'rest', ->
           clearCache()
           for key of endpoints
             endpoints[key].needsRefresh = true
-        callRefreshFns true
+        callSocketRefresh()
       
     if $injector.has 'socket'
       socket = $injector.get 'socket'
