@@ -4,6 +4,8 @@ objtrans = (input, pattern, output) ->
   if not output
     output = {}
   for field of pattern
+    if field is 'objtrans-filter'
+      return objtransFilter input, pattern[field], output
     func = null
     type = Object.prototype.toString.call pattern[field]
     if type is '[object Array]'
@@ -49,7 +51,27 @@ objtrans = (input, pattern, output) ->
         else
           output[field] = undefined
           break
-      output[field] = if func then (func output[field]) else output[field]
+      output[field] = if func then (func output[field], field) else output[field]
+  output
+objtransFilter = (input, pattern, output) ->
+  output = JSON.parse JSON.stringify input
+  for field of pattern
+    type = Object.prototype.toString.call pattern[field]
+    if type is '[object Object]'
+      output[field] = objtransFilter input[field], pattern[field]
+    else if type is '[object Function]'
+      if pattern[field] output[field], field
+        delete output[field]
+    else
+      if pattern[field]
+        bits = field.split /\./g
+        myobj = output
+        for bit, i in bits
+          if myobj[bit]
+            if i < bits.length - 1
+              myobj = myobj[bit]
+            else
+              delete myobj[bit] 
   output
 @objtrans = objtrans  
 if typeof exports is 'object'

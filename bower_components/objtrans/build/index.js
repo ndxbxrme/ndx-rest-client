@@ -1,13 +1,16 @@
 (function() {
   'use strict';
-  var objtrans;
+  var objtrans, objtransFilter;
 
   objtrans = function(input, pattern, output) {
-    var bit, bits, e, error, field, func, i, inField, index, len, myInput, type;
+    var bit, bits, e, error, field, func, inField, index, j, len, myInput, type;
     if (!output) {
       output = {};
     }
     for (field in pattern) {
+      if (field === 'objtrans-filter') {
+        return objtransFilter(input, pattern[field], output);
+      }
       func = null;
       type = Object.prototype.toString.call(pattern[field]);
       if (type === '[object Array]') {
@@ -40,8 +43,8 @@
           e = error;
           myInput = input;
         }
-        for (i = 0, len = bits.length; i < len; i++) {
-          bit = bits[i];
+        for (j = 0, len = bits.length; j < len; j++) {
+          bit = bits[j];
           index = -1;
           bit = bit.replace(/\[(.+)\]$|$/, function(all, num) {
             index = num;
@@ -67,7 +70,38 @@
             break;
           }
         }
-        output[field] = func ? func(output[field]) : output[field];
+        output[field] = func ? func(output[field], field) : output[field];
+      }
+    }
+    return output;
+  };
+
+  objtransFilter = function(input, pattern, output) {
+    var bit, bits, field, i, j, len, myobj, type;
+    output = JSON.parse(JSON.stringify(input));
+    for (field in pattern) {
+      type = Object.prototype.toString.call(pattern[field]);
+      if (type === '[object Object]') {
+        output[field] = objtransFilter(input[field], pattern[field]);
+      } else if (type === '[object Function]') {
+        if (pattern[field](output[field], field)) {
+          delete output[field];
+        }
+      } else {
+        if (pattern[field]) {
+          bits = field.split(/\./g);
+          myobj = output;
+          for (i = j = 0, len = bits.length; j < len; i = ++j) {
+            bit = bits[i];
+            if (myobj[bit]) {
+              if (i < bits.length - 1) {
+                myobj = myobj[bit];
+              } else {
+                delete myobj[bit];
+              }
+            }
+          }
+        }
       }
     }
     return output;
